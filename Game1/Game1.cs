@@ -75,7 +75,7 @@ namespace Game1
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
-            graphics.PreferredBackBufferWidth = 1024;
+            graphics.PreferredBackBufferWidth = 1280;
             graphics.PreferredBackBufferHeight = 600;
             graphics.ApplyChanges();
             Content.RootDirectory = "Content";
