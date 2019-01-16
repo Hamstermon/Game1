@@ -1,0 +1,1 @@
+[{"MapID":0,"Name":"map 1","MapFileName":"testMap1"},{"MapID":1,"Name":"map 2","MapFileName":"testMap2"}]

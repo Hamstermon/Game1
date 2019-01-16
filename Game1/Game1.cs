@@ -14,6 +14,7 @@ using Steropes.UI.Widgets;
 using Steropes.UI.Widgets.Container;
 using Steropes.UI.Widgets.TextWidgets;
 using System.Xml;
+using Newtonsoft.Json;
 
 namespace Game1
 {
@@ -69,8 +70,12 @@ namespace Game1
         //public int FrameWidth;
         //public int FrameHeight;
 
-        XmlDocument xmlDoc = new XmlDocument();
-        XmlNodeList xmlNodes;
+        public List<Attack> attacks = new List<Attack>();
+        public List<CharData> characters = new List<CharData>();
+        public List<MapData> maps = new List<MapData>();
+        public List<MapChar> mapChar = new List<MapChar>();
+        public List<CharAttack> charAtk = new List<CharAttack>();
+        static JsonSerializer serializer = new JsonSerializer();
 
         public Game1()
         {
@@ -104,6 +109,32 @@ namespace Game1
             elapsedTime = 0;
             currentFrame = 0;
             frameCount = 4;
+
+            using (StreamReader sr = new StreamReader("Content/attacks.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                attacks = serializer.Deserialize<List<Attack>>(reader);
+            }
+            using (StreamReader sr = new StreamReader("Content/character.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                characters = serializer.Deserialize<List<CharData>>(reader);
+            }
+            using (StreamReader sr = new StreamReader("Content/maps.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                maps = serializer.Deserialize<List<MapData>>(reader);
+            }
+            using (StreamReader sr = new StreamReader("Content/mapchar.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                mapChar = serializer.Deserialize<List<MapChar>>(reader);
+            }
+            using (StreamReader sr = new StreamReader("Content/charattack.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                charAtk = serializer.Deserialize<List<CharAttack>>(reader);
+            }
 
             base.Initialize();
         }

@@ -29,47 +29,84 @@ namespace Game1
         Rectangle sourceRect = new Rectangle();
         Random rng = new Random();
         List<OverworldEnemy> enemies = new List<OverworldEnemy>();
-        XmlDocument xmlDoc = new XmlDocument();
-        XmlNodeList xmlNodes;
         int totalEnemyCount = 0;
 
         int noOfTurns;
         public bool levelOver;
 
-        public string[] DatabaseSearch(string tableName, string searchFieldName, string searchValue, string[] returnFieldName)
+        public Attack SearchAttack(int id)
         {
-            string[] values = new string[returnFieldName.Length];
-            xmlNodes = xmlDoc.SelectNodes(tableName);
-            Console.WriteLine("Search started");
-            Console.WriteLine(xmlNodes.Count);
-            foreach (XmlNode node in xmlNodes)
+            Attack atk = new Attack();
+            foreach (Attack i in game.attacks)
             {
-                string foundValue = node.SelectSingleNode(searchFieldName).Value;
-                Console.WriteLine(foundValue);
-                if (foundValue == searchValue)
+                if (i.AttackID == id)
                 {
-                    for (int i= 0; i < returnFieldName.Length; i++)
-                    { 
-                        values[i] = node.SelectSingleNode(returnFieldName[i]).Value;
-                    }
+                    atk = i;
                     break;
                 }
             }
-            Console.WriteLine("Search ended");
-            return values;
+            return atk;
         }
-        
+        public CharData SearchChar(int id)
+        {
+            CharData chr = new CharData();
+            foreach (CharData i in game.characters)
+            {
+                if (i.CharID == id)
+                {
+                    chr = i;
+                    break;
+                }
+            }
+            return chr;
+        }
+        public MapData SearchMap(int id)
+        {
+            MapData map = new MapData();
+            foreach (MapData i in game.maps)
+            {
+                if (i.MapID == id)
+                {
+                    map = i;
+                    break;
+                }
+            }
+            return map;
+        }
+        public List<MapChar> FilterMapChar(int mapID)
+        {
+            List<MapChar> mapchar = new List<MapChar>();
+            foreach (MapChar i in game.mapChar)
+            {
+                if (mapID == -1 || i.MapID == mapID)
+                {
+                    mapchar.Add(i);
+                }
+            }
+            return mapchar;
+        }
+        public List<CharAttack> FilterCharAttack(int charID)
+        {
+            List<CharAttack> charatk = new List<CharAttack>();
+            foreach (CharAttack i in game.charAtk)
+            {
+                if (charID == -1 || i.CharID == charID)
+                {
+                    charatk.Add(i);
+                }
+            }
+            return charatk;
+        }
+
         public void Init(Game1 test, int not, Map mapName)
         {
             game = test;
             noOfTurns = not;
             levelOver = false;
-            FileStream fs = new FileStream("Database.xml", FileMode.Open, FileAccess.Read);
-            xmlDoc.Load(fs);
-            LoadMap(mapName);
+            LoadMap(mapName,0);
         }
 
-        private void LoadMap(Map mapName)
+        private void LoadMap(Map mapName,int mapID)
         {
             map = mapName;
             collision = mapName.Layers["1collision"];
@@ -89,15 +126,20 @@ namespace Game1
             }
             else
                 CreatePlayer(0, 0);
-            List<int> enemySpawnList = new List<int>();
-            xmlNodes = xmlDoc.SelectNodes("/mapchar");
-            foreach(XmlNode node in xmlNodes)
+            List<MapChar> enemySpawnList = FilterMapChar(mapID);
+            List<MapChar> pool = new List<MapChar>();
+            foreach (MapChar x in enemySpawnList)
             {
-                string mapId = node.Attributes.GetNamedItem("MapID").Value;
+                for (int i = 0; i < x.Weight*10; i++)
+                {
+                    pool.Add(x);
+                }
             }
+            Console.WriteLine(game.mapChar.Count);
             for (int i = 0; i < 4; i++)
             {
-                OverworldEnemy newEnemy = CreateEnemy();
+                MapChar selected = pool[rng.Next(0, pool.Count)];
+                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID]);
                 enemies.Add(newEnemy);
             }
         }
@@ -105,19 +147,20 @@ namespace Game1
         private void ChangeMap(Squared.Tiled.Object entity)
         {
             game.play.TransitionVisible(true);
-            string newMapID;
+            string tempID;
             string destination;
-            entity.Properties.TryGetValue("mapID", out newMapID);
-            string[] found = DatabaseSearch("map","MapID",newMapID,new string[]{"Name","MapFileName"});
-            game.play.trans.Text = found[0];
+            entity.Properties.TryGetValue("mapID", out tempID);
+            int newMapID = Convert.ToInt32(tempID);
+            MapData mapdata = SearchMap(newMapID);
+            game.play.trans.Text = mapdata.Name;
             entity.Properties.TryGetValue("destination", out destination);
-            ChangeMap(found[1], destination);
+            ChangeMap(mapdata.MapFileName, destination, newMapID);
             game.play.TransitionVisible(false);
         }
-        private void ChangeMap(string newMapName, string destination)
+        private void ChangeMap(string newMapName, string destination, int mapID)
         {
             game.play.mapWidget.Init(newMapName + ".tmx", game, game.graphics);
-            LoadMap(game.play.mapWidget.CurrentMap);
+            LoadMap(game.play.mapWidget.CurrentMap,mapID);
             Squared.Tiled.Object dest = teleportLocations.Objects[destination];
             player.X = dest.X + player.Width/2;
             player.Y = dest.Y + player.Height/2;
@@ -317,12 +360,16 @@ namespace Game1
             return position;
         }
 
-        private OverworldEnemy CreateEnemy()
+        private OverworldEnemy CreateEnemy(CharData data)
         {
             OverworldEnemy enemy = new OverworldEnemy();
             Vector2 pos = FindSpawnLocation();
-            int id = (rng.Next(1, 150) / 10);
-            Squared.Tiled.Object character = CreateObject("enemy"+totalEnemyCount, "characterSpritesheet", id, Convert.ToInt16(pos.X), Convert.ToInt16(pos.Y), 16, 16);
+            int size = 16;
+            if (data.SpriteSheet == "characterSpritesheet")
+            {
+                size = 16;
+            }
+            Squared.Tiled.Object character = CreateObject("enemy"+totalEnemyCount, data.SpriteSheet, data.SpriteIndex, Convert.ToInt16(pos.X)-size/2, Convert.ToInt16(pos.Y)-size/2, size, size);
             enemy.Character = character;
             totalEnemyCount++;
             return enemy;
