@@ -168,10 +168,10 @@ namespace Game1
 
         private void CreatePlayer(int X, int Y)
         {
-            player = CreateObject("player", "characterSpritesheet", 0, X, Y, 16, 16);
+            player = CreateObject("player", "characterSpritesheet", 3, X, Y, 16, 16);
         }
 
-        public void Update(GraphicsDeviceManager g)
+        public void Update(GraphicsDeviceManager g,GameTime gameTime)
         {
             cameraFocus = player;
             viewportPosition = new Vector2(cameraFocus.X - (g.PreferredBackBufferWidth / 2), cameraFocus.Y - (g.PreferredBackBufferHeight / 2));
@@ -193,13 +193,55 @@ namespace Game1
                           enemy.Direction = 3;
                     }
                 }
+                enemy.Animation(gameTime);
             }
+            game.player.Animation(gameTime);
         }
 
         public void Draw(SpriteBatch s, GraphicsDevice g)
         {
             //map.Draw(s, new Rectangle(0, 0, g.Viewport.Width, g.Viewport.Height), viewportPosition);
 
+        }
+
+        public Texture2D GetCurrentFrame(OverworldChar charData, Squared.Tiled.Object character, int xOffset)
+        {
+            string y;
+            character.Properties.TryGetValue("id", out y);
+            int yOffset = Convert.ToInt32(y);
+            string spriteSheetName;
+            character.Properties.TryGetValue("spritesheet", out spriteSheetName);
+            int frameWidth = 16;
+            int frameHeight = 16;
+            if (spriteSheetName == "characterSpritesheetLarge")
+            {
+                frameWidth = 64;
+                frameHeight = 64;
+            }
+            sourceRect = new Rectangle(charData.CurrentFrame * frameWidth + xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
+            Texture2D charTexture = game.Content.Load<Texture2D>(spriteSheetName);
+            //charTexture = textures[spriteSheetName];
+            Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
+
+            charTexture.GetData(FrameTextureData);
+
+            Color[] test = new Color[frameHeight * frameWidth];
+
+            int count = 0;
+            for (int c = sourceRect.Top; c < sourceRect.Bottom; c++)
+            {
+                for (int r = sourceRect.Left; r < sourceRect.Right; r++)
+                {
+                    Color colorA = FrameTextureData[r + (c * charTexture.Width)];
+                    test[count] = colorA;
+                    count++;
+                }
+            }
+            Texture2D frame = new Texture2D(game.graphics.GraphicsDevice, frameWidth, frameHeight);
+            frame.SetData(test);
+            character.Texture = frame;
+
+            return frame;
         }
 
         public Texture2D GetCurrentFrame(Squared.Tiled.Object character, int xOffset)
@@ -235,7 +277,7 @@ namespace Game1
                     count++;
                 }
             }
-            Texture2D frame = new Texture2D(game.graphics.GraphicsDevice,frameWidth,frameHeight);//game.Content.Load<Texture2D>("frametext");
+            Texture2D frame = new Texture2D(game.graphics.GraphicsDevice,frameWidth,frameHeight);
             frame.SetData(test);
             character.Texture = frame;
             
@@ -248,7 +290,7 @@ namespace Game1
             int xOffset = 0;
             if (direction == 0) //up
             {
-                xOffset = 2;
+                xOffset = 8;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
                     character.Y -= 1;
@@ -264,7 +306,7 @@ namespace Game1
             }
             else if (direction == 1) //right
             {
-                xOffset = 1;
+                xOffset = 4;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
                     character.X += 1;
@@ -296,7 +338,7 @@ namespace Game1
             }
             else if (direction == 3) //left
             {
-                xOffset = 3;
+                xOffset = 12;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
                     character.X -= 1;
@@ -310,7 +352,7 @@ namespace Game1
                         successfulMove = true;
                 }
             }
-            character.Texture = GetCurrentFrame(character,xOffset);
+            character.Texture = GetCurrentFrame(characterData, character,xOffset);
             characterData.Position = new int[] { character.X, character.Y };
             return successfulMove;
         }
@@ -347,10 +389,10 @@ namespace Game1
                     if (collision.GetTile(x, y) == 84)
                     {
                         Vector2 tilePos = new Vector2(x * tilepixel, y * tilepixel);
-                        double magnitude = Math.Sqrt(Math.Pow((playerPos.X-tilePos.X),2)+ Math.Pow((playerPos.Y - tilePos.Y), 2));
-                        if (magnitude >= 32.0)
+                        double magnitude = Math.Sqrt(Math.Pow((playerPos.X-tilePos.X),2) + Math.Pow((playerPos.Y - tilePos.Y), 2));
+                        if (magnitude >= 64.0)
                         {
-                            spawns[spawnCount] = new Vector2(x * tilepixel, y * tilepixel);
+                            spawns[spawnCount] = tilePos;
                             spawnCount++;
                         }
                     }
@@ -369,8 +411,17 @@ namespace Game1
             {
                 size = 16;
             }
-            Squared.Tiled.Object character = CreateObject("enemy"+totalEnemyCount, data.SpriteSheet, data.SpriteIndex, Convert.ToInt16(pos.X)-size/2, Convert.ToInt16(pos.Y)-size/2, size, size);
+            else if (data.SpriteSheet == "characterSpritesheetLarge")
+            {
+                size = 64;
+            }
+            Squared.Tiled.Object character = CreateObject("enemy"+totalEnemyCount, data.SpriteSheet, data.SpriteIndex, Convert.ToInt16(pos.X)+size/2, Convert.ToInt16(pos.Y)+size/2, size, size);
             enemy.Character = character;
+            enemy.WalkSpeed = data.PassiveSpeed;
+            enemy.PassiveSpeed = data.PassiveSpeed;
+            enemy.AgressiveSpeed = data.AgressiveSpeed;
+            enemy.FrameCount = 4;
+            enemy.AnimationSpeed = 100;
             totalEnemyCount++;
             return enemy;
         }

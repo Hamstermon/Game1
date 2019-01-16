@@ -57,7 +57,7 @@ namespace Game1
 
         string mainMenuState = "Title";
         Texture2D pixel;
-        OverworldPlayer player = new OverworldPlayer();
+        public OverworldPlayer player = new OverworldPlayer();
         //Screens
         MainMenu main;
         OverWorldMenu menu;
@@ -157,6 +157,8 @@ namespace Game1
 
             //Default Player Values
             player.Direction = 2;
+            player.AnimationSpeed = 100;
+            player.FrameCount = 4;
 
             // TODO: use this.Content to load your game content here
         }
@@ -203,7 +205,7 @@ namespace Game1
                     break;
                 case GameState.Playing:
                 case GameState.Overworld:
-                    UpdateOverworld();
+                    UpdateOverworld(gameTime);
                     break;
                 case GameState.Battle:
                     UpdateBattle();
@@ -224,7 +226,7 @@ namespace Game1
             }
         }
 
-        public void UpdateOverworld()
+        public void UpdateOverworld(GameTime gameTime)
         {
             if (State == GameState.Overworld)
             {
@@ -261,7 +263,7 @@ namespace Game1
             }
 
             //update level
-            level.Update(graphics);
+            level.Update(graphics,gameTime);
 
             if (level.levelOver)
                 State = GameState.EndGame;

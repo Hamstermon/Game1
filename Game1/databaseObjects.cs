@@ -184,6 +184,18 @@ namespace Game1
             set { overworldAI = value; }
             get { return overworldAI; }
         }
+        int passiveSpeed = 0;
+        public int PassiveSpeed
+        {
+            set { passiveSpeed = value; }
+            get { return passiveSpeed; }
+        }
+        int agressiveSpeed = 0;
+        public int AgressiveSpeed
+        {
+            set { agressiveSpeed = value; }
+            get { return agressiveSpeed; }
+        }
         string battleAI = "";
         public string BattleAI
         {
@@ -210,6 +222,12 @@ namespace Game1
         {
             set { mapFileName = value; }
             get { return mapFileName; }
+        }
+        int spawnCap = 0;
+        public int SpawnCap
+        {
+            set { spawnCap = value; }
+            get { return spawnCap; }
         }
     }
     public class MapChar
