@@ -58,7 +58,7 @@ namespace Game1
             Console.WriteLine("Search ended");
             return values;
         }
-        //https://stackoverflow.com/questions/18442917/using-xmldocument-to-read-xml
+        
         public void Init(Game1 test, int not, Map mapName)
         {
             game = test;
