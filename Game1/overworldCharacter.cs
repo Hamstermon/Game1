@@ -20,20 +20,6 @@ namespace Game1
             get { return direction; }
         }
 
-        int[] position = { 0, 0 };
-        public int[] Position
-        {
-            set { position = value; }
-            get { return position; }
-        }
-
-        Character[] party = new Character[5];
-        public Character[] Party
-        {
-            set { party = value; }
-            get { return party; }
-        }
-
         int walkSpeed = 4;
         public int WalkSpeed
         {
@@ -114,12 +100,6 @@ namespace Game1
 
     public class OverworldPlayer : OverworldChar
     {
-        int gold = 0;
-        public int Gold
-        {
-            set { gold = value; }
-            get { return gold; }
-        }
         
     }
 }

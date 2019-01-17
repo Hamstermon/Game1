@@ -29,17 +29,25 @@ namespace Game1
 
         public Playing(IUIStyle s, Game1 parent, GraphicsDeviceManager man) : base(s)
         {
-            mapWidget = new MapWidget(s);
+            mapWidget = new MapWidget(s)
+            {
+                Visibility = Visibility.Hidden
+            };
             trans = new Label(s)
             {
-                //Anchor = AnchoredRect.CreateFull(1),
+                Anchor = AnchoredRect.CreateFull(1),
                 Color = Color.Black,
                 TextColor = Color.White,
-                
-                //Visibility = Visibility.Visible
+                Visibility = Visibility.Visible
             };
-            griddy = new Grid(s);
+            griddy = new Grid(s)
+            {
+                Color = Color.Black,
+                Visibility = Visibility.Visible,
+                Anchor = AnchoredRect.CreateFull(1)
+            };
             this.Add(mapWidget);
+            this.Add(griddy);
             griddy.Add(trans);
         }
 
@@ -47,17 +55,15 @@ namespace Game1
         {
             if (visible)
             {
-                trans.Visibility = Visibility.Visible;
+                Console.WriteLine("MAKING TRANSITION SCREEN VISIBLE");
+                griddy.Visibility = Visibility.Visible;
                 mapWidget.Visibility = Visibility.Hidden;
-                this.Remove(mapWidget);
-                this.Add(griddy);
             }
             else
             {
-                trans.Visibility = Visibility.Hidden;
+                Console.WriteLine("MAKING MAP SCREEN VISIBLE");
+                griddy.Visibility = Visibility.Hidden;
                 mapWidget.Visibility = Visibility.Visible;
-                this.Add(mapWidget);
-                this.Remove(griddy);
             }
         }        
     }

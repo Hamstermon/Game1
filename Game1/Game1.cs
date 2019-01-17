@@ -24,7 +24,7 @@ namespace Game1
     public class Game1 : Game
     {
         public GraphicsDeviceManager graphics;
-        SpriteBatch spriteBatch;
+        public SpriteBatch spriteBatch;
         public Map map;
         public IUIManager uiManager;
         public enum GameState
@@ -58,18 +58,14 @@ namespace Game1
         string mainMenuState = "Title";
         Texture2D pixel;
         public OverworldPlayer player = new OverworldPlayer();
+        public PlayerSaveData playerSaveData = new PlayerSaveData();
         //Screens
         MainMenu main;
         OverWorldMenu menu;
         public Playing play;
         public Level level;
-
-        public int elapsedTime;
-        public int frameCount;
-        public int currentFrame;
-        //public int FrameWidth;
-        //public int FrameHeight;
-
+        int elapsedTime = 0;
+        
         public List<Attack> attacks = new List<Attack>();
         public List<CharData> characters = new List<CharData>();
         public List<MapData> maps = new List<MapData>();
@@ -105,11 +101,7 @@ namespace Game1
             main = new MainMenu(styleSystem, this);
             menu = new OverWorldMenu(styleSystem, this);
             play = new Playing(styleSystem, this, graphics);
-
-            elapsedTime = 0;
-            currentFrame = 0;
-            frameCount = 4;
-
+            
             using (StreamReader sr = new StreamReader("Content/attacks.txt"))
             using (JsonReader reader = new JsonTextReader(sr))
             {
@@ -180,18 +172,9 @@ namespace Game1
         protected override void Update(GameTime gameTime)
         {
             elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
-            if (elapsedTime > 100)
+            if (elapsedTime > 10000)
             {
-                // Move to the next frame
-                currentFrame++;
-
-                // If the currentFrame is equal to frameCount reset currentFrame to zero
-                if (currentFrame == frameCount)
-                {
-                    currentFrame = 0;
-                }
-
-                // Reset the elapsed time to zero
+                level.SpawnCycle();
                 elapsedTime = 0;
             }
 
@@ -218,6 +201,72 @@ namespace Game1
             base.Update(gameTime);
         }
 
+        public int FindElement(string tableName, int id)
+        {
+            int realID = -1;
+            if (tableName == "attack")
+            {
+                for (int i = 0; i < attacks.Count; i++)
+                {
+                    Attack v = attacks[i];
+                    if (v.AttackID == id)
+                    {
+                        realID = i;
+                        break;
+                    }
+                }
+            }
+            else if (tableName == "character")
+            {
+                for (int i = 0; i < characters.Count; i++)
+                {
+                    CharData v = characters[i];
+                    if (v.CharID == id)
+                    {
+                        realID = i;
+                        break;
+                    }
+                }
+            }
+            else if (tableName == "map")
+            {
+                for (int i = 0; i < maps.Count; i++)
+                {
+                    MapData v = maps[i];
+                    if (v.MapID == id)
+                    {
+                        realID = i;
+                        break;
+                    }
+                }
+            }
+            else if (tableName == "mapchar")
+            {
+                for (int i = 0; i < mapChar.Count; i++)
+                {
+                    MapChar v = mapChar[i];
+                    if (v.ID == id)
+                    {
+                        realID = i;
+                        break;
+                    }
+                }
+            }
+            else if (tableName == "charattack")
+            {
+                for (int i = 0; i < charAtk.Count; i++)
+                {
+                    CharAttack v = charAtk[i];
+                    if (v.ID == id)
+                    {
+                        realID = i;
+                        break;
+                    }
+                }
+            }
+            return realID;
+        }
+
         public void UpdateMainMenu()
         {
             if (State == GameState.MainMenu)
@@ -235,14 +284,29 @@ namespace Game1
             else if (State == GameState.Playing)
             {
                 uiManager.Root.Content = play;
+                bool moving = false;
                 if (Keyboard.GetState().IsKeyDown(Keys.Left))
+                {
                     level.MoveCharacter(player, level.player, 3);
+                    moving = true;
+                }
                 if (Keyboard.GetState().IsKeyDown(Keys.Right))
+                { 
                     level.MoveCharacter(player, level.player, 1);
+                    moving = true;
+                }
                 if (Keyboard.GetState().IsKeyDown(Keys.Up))
+                { 
                     level.MoveCharacter(player, level.player, 0);
+                    moving = true;
+                }
                 if (Keyboard.GetState().IsKeyDown(Keys.Down))
+                   {
                     level.MoveCharacter(player, level.player, 2);
+                    moving = true;
+                }
+                if (!moving)
+                    player.CurrentFrame = 0;
                 if (Keyboard.GetState().IsKeyDown(Keys.E))
                 {
                     State = GameState.Overworld;

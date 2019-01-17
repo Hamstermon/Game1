@@ -15,6 +15,7 @@ namespace Game1
     public class Level
     {
         public Map map;
+        public MapData mapData;
         public Squared.Tiled.Object cameraFocus;
         Layer collision;
         ObjectGroup objects;
@@ -29,6 +30,7 @@ namespace Game1
         Rectangle sourceRect = new Rectangle();
         Random rng = new Random();
         List<OverworldEnemy> enemies = new List<OverworldEnemy>();
+        List<MapChar> enemySpawnPool = new List<MapChar>();
         int totalEnemyCount = 0;
 
         int noOfTurns;
@@ -127,26 +129,28 @@ namespace Game1
             else
                 CreatePlayer(0, 0);
             List<MapChar> enemySpawnList = FilterMapChar(mapID);
-            List<MapChar> pool = new List<MapChar>();
+            enemySpawnPool = new List<MapChar>();
             foreach (MapChar x in enemySpawnList)
             {
                 for (int i = 0; i < x.Weight*10; i++)
                 {
-                    pool.Add(x);
+                    enemySpawnPool.Add(x);
                 }
             }
             Console.WriteLine(game.mapChar.Count);
             for (int i = 0; i < 4; i++)
             {
-                MapChar selected = pool[rng.Next(0, pool.Count)];
+                MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
                 OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID]);
                 enemies.Add(newEnemy);
             }
+            mapData = game.maps[game.FindElement("map", mapID)];
         }
 
         private void ChangeMap(Squared.Tiled.Object entity)
         {
             game.play.TransitionVisible(true);
+            Draw(game.spriteBatch, game.GraphicsDevice);
             string tempID;
             string destination;
             entity.Properties.TryGetValue("mapID", out tempID);
@@ -171,7 +175,7 @@ namespace Game1
             player = CreateObject("player", "characterSpritesheet", 3, X, Y, 16, 16);
         }
 
-        public void Update(GraphicsDeviceManager g,GameTime gameTime)
+        public void Update(GraphicsDeviceManager g, GameTime gameTime)
         {
             cameraFocus = player;
             viewportPosition = new Vector2(cameraFocus.X - (g.PreferredBackBufferWidth / 2), cameraFocus.Y - (g.PreferredBackBufferHeight / 2));
@@ -258,7 +262,7 @@ namespace Game1
                 frameWidth = 64;
                 frameHeight = 64;
             }
-            sourceRect = new Rectangle(game.currentFrame * frameWidth + xOffset * frameWidth * game.frameCount, yOffset * frameHeight, frameWidth, frameHeight);
+            sourceRect = new Rectangle(xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
             Texture2D charTexture = game.Content.Load<Texture2D>(spriteSheetName);
             //charTexture = textures[spriteSheetName];
             Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
@@ -353,10 +357,9 @@ namespace Game1
                 }
             }
             character.Texture = GetCurrentFrame(characterData, character,xOffset);
-            characterData.Position = new int[] { character.X, character.Y };
             return successfulMove;
         }
-
+        
         private Squared.Tiled.Object CreateObject(string name, string spriteSheet, int id, int X, int Y, int width, int height)
         {
             Squared.Tiled.Object obj = new Squared.Tiled.Object();
@@ -390,7 +393,7 @@ namespace Game1
                     {
                         Vector2 tilePos = new Vector2(x * tilepixel, y * tilepixel);
                         double magnitude = Math.Sqrt(Math.Pow((playerPos.X-tilePos.X),2) + Math.Pow((playerPos.Y - tilePos.Y), 2));
-                        if (magnitude >= 64.0)
+                        if (magnitude >= 128.0)
                         {
                             spawns[spawnCount] = tilePos;
                             spawnCount++;
@@ -424,6 +427,35 @@ namespace Game1
             enemy.AnimationSpeed = 100;
             totalEnemyCount++;
             return enemy;
+        }
+
+        public void SpawnCycle()
+        {
+            Vector2 playerPos = new Vector2(player.X, player.Y);
+            List<OverworldEnemy> toRemove = new List<OverworldEnemy>();
+            foreach (OverworldEnemy i in enemies)
+            {
+                Vector2 charPos = new Vector2(i.Character.X, i.Character.Y);
+                double magnitude = Math.Sqrt(Math.Pow((playerPos.X - charPos.X), 2) + Math.Pow((playerPos.Y - charPos.Y), 2));
+                if (magnitude >= 512.0)
+                {
+                    if (rng.Next(0,100) < 50)
+                    {
+                        toRemove.Add(i);
+                    }
+                }
+            }
+            foreach (OverworldEnemy i in toRemove)
+            {
+                objects.Objects.Remove(i.Character.Name);
+                enemies.Remove(i);
+            }
+            if (enemies.Count < mapData.SpawnCap)
+            {
+                MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
+                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID]);
+                enemies.Add(newEnemy);
+            }
         }
 
         private bool CheckBounds(Squared.Tiled.Object character)

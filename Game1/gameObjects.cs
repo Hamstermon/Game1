@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Game1
 {
-    class Item
+    public class Item
     {
         int itemID;
         public int ItemID
@@ -25,6 +25,21 @@ namespace Game1
         {
             set { quantity = value; }
             get { return quantity; }
+        }
+    }
+    public class Event
+    {
+        string name;
+        public string Name
+        {
+            set { name = value; }
+            get { return name; }
+        }
+        int v;
+        public int Value
+        {
+            set { v = value; }
+            get { return v; }
         }
     }
 }

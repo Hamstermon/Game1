@@ -45,11 +45,12 @@
     <Compile Include="character.cs" />
     <Compile Include="databaseObjects.cs" />
     <Compile Include="Game1.cs" />
-    <Compile Include="Item.cs" />
+    <Compile Include="gameObjects.cs" />
     <Compile Include="Level.cs" />
     <Compile Include="MainMenu.cs" />
     <Compile Include="MapWidget.cs" />
     <Compile Include="overworldCharacter.cs" />
+    <Compile Include="PlayerSaveData.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
