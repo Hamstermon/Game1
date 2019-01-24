@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.IO;
+using System.Diagnostics;
 using System;
 using Squared.Tiled;
 using System.Collections.Generic;
@@ -35,7 +36,7 @@ namespace Game1
             Battle,
             EndGame
         }
-        private GameState state = GameState.Playing;
+        private GameState state = GameState.MainMenu;
         public GameState State
         {
             get { return state; }
@@ -76,7 +77,7 @@ namespace Game1
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
-            graphics.PreferredBackBufferWidth = 1280;
+            graphics.PreferredBackBufferWidth = 1080;
             graphics.PreferredBackBufferHeight = 600;
             graphics.ApplyChanges();
             Content.RootDirectory = "Content";
@@ -197,7 +198,6 @@ namespace Game1
                     UpdateEndGame();
                     break;
             }
-
             base.Update(gameTime);
         }
 
@@ -267,6 +267,18 @@ namespace Game1
             return realID;
         }
 
+        public void Wait(int milliseconds)
+        {
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            do
+            {
+
+            }
+            while (timer.ElapsedMilliseconds < milliseconds);
+            Console.WriteLine("waited");
+        }
+
         public void UpdateMainMenu()
         {
             if (State == GameState.MainMenu)
@@ -283,6 +295,11 @@ namespace Game1
             }
             else if (State == GameState.Playing)
             {
+                if (play.trans.Visibility == Visibility.Visible)
+                {
+                    Wait(1000);
+                    play.TransitionVisible(false);
+                }
                 uiManager.Root.Content = play;
                 bool moving = false;
                 if (Keyboard.GetState().IsKeyDown(Keys.Left))

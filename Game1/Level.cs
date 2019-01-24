@@ -26,7 +26,6 @@ namespace Game1
         int tilepixel;
         Game1 game;
         public Squared.Tiled.Object player;
-        Dictionary<string,Texture2D> textures = new Dictionary<string,Texture2D>();
         Rectangle sourceRect = new Rectangle();
         Random rng = new Random();
         List<OverworldEnemy> enemies = new List<OverworldEnemy>();
@@ -137,7 +136,7 @@ namespace Game1
                     enemySpawnPool.Add(x);
                 }
             }
-            Console.WriteLine(game.mapChar.Count);
+            Console.WriteLine("Load Map char count:" +game.mapChar.Count);
             for (int i = 0; i < 4; i++)
             {
                 MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
@@ -146,11 +145,10 @@ namespace Game1
             }
             mapData = game.maps[game.FindElement("map", mapID)];
         }
-
+        
         private void ChangeMap(Squared.Tiled.Object entity)
         {
             game.play.TransitionVisible(true);
-            Draw(game.spriteBatch, game.GraphicsDevice);
             string tempID;
             string destination;
             entity.Properties.TryGetValue("mapID", out tempID);
@@ -159,7 +157,7 @@ namespace Game1
             game.play.trans.Text = mapdata.Name;
             entity.Properties.TryGetValue("destination", out destination);
             ChangeMap(mapdata.MapFileName, destination, newMapID);
-            game.play.TransitionVisible(false);
+            
         }
         private void ChangeMap(string newMapName, string destination, int mapID)
         {
@@ -224,7 +222,6 @@ namespace Game1
             }
             sourceRect = new Rectangle(charData.CurrentFrame * frameWidth + xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
             Texture2D charTexture = game.Content.Load<Texture2D>(spriteSheetName);
-            //charTexture = textures[spriteSheetName];
             Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
 
             charTexture.GetData(FrameTextureData);
@@ -264,7 +261,6 @@ namespace Game1
             }
             sourceRect = new Rectangle(xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
             Texture2D charTexture = game.Content.Load<Texture2D>(spriteSheetName);
-            //charTexture = textures[spriteSheetName];
             Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
 
             charTexture.GetData(FrameTextureData);
@@ -370,10 +366,6 @@ namespace Game1
             obj.Height = height;
             obj.Properties.Add("spritesheet", spriteSheet);
             obj.Properties.Add("id", id.ToString());
-            if (!textures.ContainsKey(spriteSheet))
-            {
-                textures.Add(spriteSheet, game.Content.Load<Texture2D>(spriteSheet));
-            }
             obj.Texture = GetCurrentFrame(obj,0);
             objects.Objects.Add(name, obj);
             return obj;
@@ -504,6 +496,7 @@ namespace Game1
                     if (playrec.Intersects(objrec))
                     {
                         ChangeMap(entity.Value);
+                        
                         break;
                     }
                 }

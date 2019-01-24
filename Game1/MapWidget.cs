@@ -1180,7 +1180,10 @@ namespace Game1
         public Map CurrentMap
         {
             get { return map; }
-            set { map = value; }
+            set {
+                map = value;
+                Console.WriteLine("mapwidget mapchange");
+            }
         }
 
         private Squared.Tiled.Object cameraObject;
@@ -1209,7 +1212,7 @@ namespace Game1
         {
             parent = game;
             g = man;
-            map = Map.Load(Path.Combine(game.Content.RootDirectory, mapname), game.Content);
+            CurrentMap = Map.Load(Path.Combine(game.Content.RootDirectory, mapname), game.Content);
             TextureColor = Color.White;
         }
 
