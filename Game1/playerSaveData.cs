@@ -33,6 +33,13 @@ namespace Game1
             get { return gold; }
         }
 
+        int mapid = 0;
+        public int MapID
+        {
+            set { mapid = value; }
+            get { return mapid; }
+        }
+
         List<Character> characters = new List<Character>();
         public List<Character> CharacterList
         {

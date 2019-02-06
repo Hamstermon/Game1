@@ -36,6 +36,20 @@ namespace Game1
             get { return category; }
         }
 
+        string zones = "OOXOO";
+        public string Zones
+        {
+            set { zones = value; }
+            get { return zones; }
+        }
+
+        bool fix = false;
+        public bool Fixed
+        {
+            set { fix = value; }
+            get { return fix; }
+        }
+
         int power = 0;
         public int Power
         {
@@ -90,6 +104,13 @@ namespace Game1
         {
             set { effect2Chance = value; }
             get { return effect2Chance; }
+        }
+
+        string description = "";
+        public string Description
+        {
+            set { description = value; }
+            get { return description; }
         }
     }
     public class CharData
@@ -147,6 +168,12 @@ namespace Game1
         {
             set { hp = value; }
             get { return hp; }
+        }
+        int mp = 0;
+        public int MP
+        {
+            set { mp = value; }
+            get { return mp; }
         }
         int atk = 0;
         public int ATK
@@ -222,6 +249,12 @@ namespace Game1
         {
             set { mapFileName = value; }
             get { return mapFileName; }
+        }
+        string battleFileName = "";
+        public string BattleFileName
+        {
+            set { battleFileName = value; }
+            get { return battleFileName; }
         }
         int spawnCap = 0;
         public int SpawnCap

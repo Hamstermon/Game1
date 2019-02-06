@@ -54,6 +54,20 @@ namespace Game1
             set { animationSpeed = value; }
             get { return animationSpeed; }
         }
+
+        int index = 0;
+        public int SpriteIndex
+        {
+            set { index = value; }
+            get { return index; }
+        }
+
+        string sheet = "characterSpritesheet";
+        public string SpriteSheet
+        {
+            set { sheet = value; }
+            get { return sheet; }
+        }
         
         public void Animation(GameTime gameTime)
         {
@@ -95,6 +109,18 @@ namespace Game1
         {
             set { agressiveSpeed = value; }
             get { return agressiveSpeed; }
+        }
+        int charID = 0;
+        public int CharacterID
+        {
+            set { charID = value; }
+            get { return charID; }
+        }
+        int lvl = 0;
+        public int Level
+        {
+            set { lvl = value; }
+            get { return lvl; }
         }
     }
 

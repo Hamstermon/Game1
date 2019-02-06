@@ -214,11 +214,6 @@
 /processorParam:TextureFormat=Color
 /build:SteropesUIContent/UI/Metro/SplitterDragHandle.png
 
-#begin SteropesUIContent/UI/Metro/style.xml
-/importer:XmlImporter
-/processor:PassThroughProcessor
-/build:SteropesUIContent/UI/Metro/style.xml
-
 #begin SteropesUIContent/UI/Metro/WhitePixel.png
 /importer:TextureImporter
 /processor:TextureProcessor
