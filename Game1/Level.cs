@@ -26,12 +26,10 @@ namespace Game1
         int tilepixel;
         Game1 game;
         public Squared.Tiled.Object player;
-        Rectangle sourceRect = new Rectangle();
         Random rng = new Random();
         List<OverworldEnemy> enemies = new List<OverworldEnemy>();
         List<MapChar> enemySpawnPool = new List<MapChar>();
         int totalEnemyCount = 0;
-
         int noOfTurns;
         public bool levelOver;
 
@@ -51,6 +49,7 @@ namespace Game1
             teleports = mapName.ObjectGroups["teleport"];
             teleportLocations = mapName.ObjectGroups["teleportDestination"];
             objects = mapName.ObjectGroups["5objects"];
+            mapData = game.SearchMap(mapID);
             //if (player != null)
             //    objects.Objects.Remove(player.Name);
             foreach (OverworldEnemy enemy in enemies)
@@ -89,10 +88,10 @@ namespace Game1
             string destination;
             entity.Properties.TryGetValue("mapID", out tempID);
             int newMapID = Convert.ToInt32(tempID);
-            MapData mapdata = game.SearchMap(newMapID);
-            game.play.trans.Text = mapdata.Name;
+            mapData = game.SearchMap(newMapID);
+            game.play.trans.Text = mapData.Name;
             entity.Properties.TryGetValue("destination", out destination);
-            ChangeMap(mapdata.MapFileName, destination, newMapID);
+            ChangeMap(mapData.MapFileName, destination, newMapID);
             
         }
         private void ChangeMap(string newMapName, string destination, int mapID)
@@ -109,6 +108,7 @@ namespace Game1
             if (game.pause == false)
             {
                 cameraFocus = player;
+                game.play.mapWidget.CameraObject = cameraFocus;
                 viewportPosition = new Vector2(cameraFocus.X - (g.PreferredBackBufferWidth / 2), cameraFocus.Y - (g.PreferredBackBufferHeight / 2));
                 foreach (OverworldEnemy enemy in enemies)
                 {
@@ -133,8 +133,8 @@ namespace Game1
                     if (fight)
                     {
                         game.pause = true;
-                        List<OverworldEnemy> fighters = GetEnemies(enemy.Character.X,enemy.Character.Y,256);
-                        foreach(OverworldEnemy e in fighters)
+                        List<OverworldEnemy> fighters = GetEnemies(enemy.Character.X, enemy.Character.Y, 256);
+                        foreach (OverworldEnemy e in fighters)
                         {
                             game.GetCurrentFrame(e, e.Character, 29);
                         }

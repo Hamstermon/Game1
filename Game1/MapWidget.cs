@@ -1180,10 +1180,7 @@ namespace Game1
         public Map CurrentMap
         {
             get { return map; }
-            set {
-                map = value;
-                Console.WriteLine("mapwidget mapchange");
-            }
+            set { map = value; }
         }
 
         private Squared.Tiled.Object cameraObject;
@@ -1191,7 +1188,7 @@ namespace Game1
         public Squared.Tiled.Object CameraObject
         {
             get { return cameraObject; }
-            set { CameraObject = value; }
+            set { cameraObject = value; }
         }
 
         private Vector2 viewportPosition;
@@ -1223,8 +1220,7 @@ namespace Game1
 
         protected override void DrawWidget(IBatchedDrawingService drawingService)
         {
-            cameraObject = parent.level.cameraFocus;
-            viewportPosition = new Vector2(cameraObject.X - (g.PreferredBackBufferWidth / 2), cameraObject.Y - (g.PreferredBackBufferHeight / 2));
+            viewportPosition = new Vector2(cameraObject.X + (cameraObject.Width/2) - (g.PreferredBackBufferWidth / 2), cameraObject.Y + (cameraObject.Height/2) - (g.PreferredBackBufferHeight / 2));
             map.Draw(drawingService, new Rectangle(0, 0, drawingService.GraphicsDevice.Viewport.Width, drawingService.GraphicsDevice.Viewport.Height), viewportPosition);
         }
 

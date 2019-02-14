@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Squared.Tiled;
+using Steropes.UI.Components;
 
 namespace Game1
 {
@@ -17,7 +18,7 @@ namespace Game1
         Frozen,
         Confused
     }
-    class Fighter
+    public class Fighter
     {
         Character character;
         public Character Character
@@ -187,18 +188,40 @@ namespace Game1
             get { return skill3; }
         }
     }
+    public class BattleAction
+    {
+        public enum Command
+        {
+            Attack1,
+            Attack2,
+            Attack3,
+            Defend,
+            Move,
+            Flee
+        }
+        public Command command;
+        public bool[] target = new bool[5] { false, false, false, false, false };
+    }
 
-    class Battle
+
+    public class Battle
     {
         public Fighter[] allies = new Fighter[5];
         public Fighter[] enemies = new Fighter[5];
         Game1 parent;
         MapWidget battlefield;
+        BattleUI ui;
+        public BattleAction playerAction;
+
+        public List<Fighter> chars = new List<Fighter>();
+        public List<Fighter> order = new List<Fighter>();
+        public int turnNumber;
 
         public Battle(Game1 p)
         {
             parent = p;
             battlefield = p.play.battle;
+            ui = p.play.battleUI;
         }
         
         public void AddFighter(Character c, Fighter[] team, int slot)
@@ -281,6 +304,94 @@ namespace Game1
             battlefield.CurrentMap.ObjectGroups["5objects"].Objects.Add(info.Name + slotName, charObj);
             parent.GetCurrentFrame(charObj, xOffset);
             team[slot] = f;
+        }
+
+        public BattleAction Ai(Fighter i)
+        {
+            BattleAction action = new BattleAction();
+            return action;
+        }
+
+        public void TurnCycle()
+        {
+            foreach (Fighter i in allies)
+            {
+                if (i != null)
+                {
+                    if (i.CurrentHP > 0)
+                        chars.Add(i);
+                }
+            }
+            foreach (Fighter i in enemies)
+            {
+                if (i != null)
+                {
+                    if (i.CurrentHP > 0)
+                        chars.Add(i);
+                }
+            }
+            for (int i = 0; i < chars.Count; i++)
+            {
+                Fighter fastest = new Fighter();
+                foreach (Fighter x in chars)
+                {
+                    if (x.SPD >= fastest.SPD)
+                    {
+                        fastest = x;
+                    }
+                }
+                order.Add(fastest);
+                chars.Remove(fastest);
+            }
+            turnNumber = 0;
+        }
+
+        public void Turn(Fighter fighter, BattleAction action)
+        {
+            ui.commands.selection = new bool[5] { false, false, false, false, false };
+            ui.commands.UpdateSelection();
+            if (action.command == BattleAction.Command.Move)
+            {
+
+            }
+            turnNumber++;
+            if (turnNumber >= order.Count)
+            {
+                TurnCycle();
+            }
+        }
+
+        public int GetPosOfFighter(Fighter fighter)
+        {
+            int pos = 0;
+            for (int i = 0; i < 5; i++)
+            {
+                if (allies[i] == fighter || enemies[i] == fighter)
+                {
+                    pos = i;
+                    break;
+                }
+            }
+            return pos;
+        }
+
+        public Fighter[] GetTeam(Fighter fighter)
+        {
+            Fighter[] team = new Fighter[5];
+            for (int i = 0; i < 5; i++)
+            {
+                if (allies[i] == fighter)
+                {
+                    team = allies;
+                    break;
+                }
+                else if (enemies[i] == fighter)
+                {
+                    team = enemies;
+                    break;
+                }
+            }
+            return team;
         }
     }
 }

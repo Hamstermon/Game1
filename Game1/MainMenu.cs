@@ -27,38 +27,342 @@ namespace Game1
         public MapWidget mapWidget;
         public TextField trans;
         public MapWidget battle;
+        public BattleUI battleUI;
 
         public Playing(IUIStyle s, Game1 parent, GraphicsDeviceManager man) : base(s)
         {
             mapWidget = new MapWidget(s);
-            battle = new MapWidget(s) { Visibility = Visibility.Hidden };
+            battle = new MapWidget(s);
             trans = new TextField(s)
             {
                 //Alignment = Alignment.Center,
                 
-                Visibility = Visibility.Hidden,
-                Anchor = AnchoredRect.CreateFixed(0,0,1080,800),
+                Anchor = AnchoredRect.CreateFixed(0, 0, 1080, 800),
                 Color = Color.Black,
                 TextColor = Color.White
             };
+            battleUI = new BattleUI(s, parent);
             Add(mapWidget);
-            Add(trans);
-            Add(battle);
+            //Add(trans);
+            //Add(battle);
+            //Add(battleUI);
         }
 
         public void TransitionVisible(bool visible)
         {
             if (visible)
             {
-                trans.Visibility = Visibility.Visible;
-                mapWidget.Visibility = Visibility.Hidden;
+                Add(trans);
+                Remove(mapWidget);
+                //trans.Visibility = Visibility.Visible;
+                //mapWidget.Visibility = Visibility.Hidden;
             }
             else
             {
-                trans.Visibility = Visibility.Hidden;
-                mapWidget.Visibility = Visibility.Visible;
+                Add(mapWidget);
+                Remove(trans);
+                //trans.Visibility = Visibility.Hidden;
+                //mapWidget.Visibility = Visibility.Visible;
             }
-        }        
+        }
+    }
+
+    public class BattleUI : DockPanel
+    {
+        int width = 1080;
+        int height = 800;
+        UITexture uiTexture;
+        Battle battle;
+        public BattleCommands commands;
+
+        public BattleUI(IUIStyle s, Game1 parent) : base(s)
+        {
+            Grid grid = new Grid(s) { Anchor = AnchoredRect.CreateFixed(0,0,width,height) };
+            DockPanel enemies = new DockPanel(s);
+            PartySlotB[] enemySlot = new PartySlotB[5];
+            for (int i = 0; i < 5; i++)
+            {
+                PartySlotB temp = new PartySlotB(s, parent, width / 5, height / 9);
+                enemySlot[i] = temp;
+                enemies.Add(temp, DockPanelConstraint.Left);
+            }
+            DockPanel players = new DockPanel(s) { Anchor = AnchoredRect.CreateFixed(0, 8*height/9, width, height) };
+            PartySlotB[] playerSlot = new PartySlotB[5];
+            for (int i = 0; i < 5; i++)
+            {
+                PartySlotB temp = new PartySlotB(s, parent, width / 5, height / 9);
+                enemySlot[i] = temp;
+                
+                players.Add(temp, DockPanelConstraint.Left);
+            }
+            commands = new BattleCommands(s, parent); //{ Anchor = AnchoredRect.CreateFixed(0, height / 9, width/4, 7*height/9) };
+            grid.Add(enemies);
+            grid.Add(players);
+            Add(grid);
+            //Add(commands);
+        }
+    }
+
+    public class PartySlotB : Grid
+    {
+        Label n;
+        Label l;
+        HPBar hp;
+        MPBar mp;
+        TextField bg;
+        UITexture uiTexture;
+        string location;
+        int pos;
+        public PartySlotB(IUIStyle s, Game1 parent, int width, int height) : base(s)
+        {
+            bg = new TextField(s) { Color = Color.LightCyan, ReadOnly = true, Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
+            n = new Label(s, "aaaaa") { Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(width * 0.6), Convert.ToInt32(height * 0.3)) };
+            l = new Label(s, "lv.0") { Anchor = AnchoredRect.CreateFixed(Convert.ToInt32(width * 0.6), 0, Convert.ToInt32(width * 0.4), Convert.ToInt32(height * 0.3)) };
+            hp = new HPBar(s) { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.3), 0, 0), Width = width, Height = Convert.ToInt32(height * 0.35) };
+            mp = new MPBar(s) { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.65), 0, 0), Width = width, Height = Convert.ToInt32(height * 0.35) };
+            Add(bg);
+            Add(n);
+            Add(l);
+            Add(hp);
+            Add(mp);
+        }
+        public string Name
+        {
+            set { n.Text = value; }
+        }
+        public string Level
+        {
+            set
+            {
+                if (value == "")
+                    l.Text = "";
+                else
+                    l.Text = "Level: " + value;
+            }
+        }
+    }
+
+    public class BattleCommands : DockPanel
+    {
+        int skillSelected;
+        enum Mode
+        {
+            Skill,
+            Move
+        };
+        Mode mode;
+        public bool[] selection;
+        public bool fixedSelection = false;
+        public bool selectAlly = false;
+        Game1 game;
+        DockPanel main;
+        DockPanel skills;
+        DockPanel aiming;
+        List<Squared.Tiled.Object> selects = new List<Squared.Tiled.Object>();
+        public BattleCommands(IUIStyle s, Game1 parent) : base(s)
+        {
+            game = parent;
+            Add(new Label(s) { Visibility = Visibility.Hidden });
+            Add(new Label(s) { Visibility = Visibility.Hidden });
+            main = new DockPanel(s);
+            skills = new DockPanel(s);
+            aiming = new DockPanel(s);
+            var attack = new Button(s, "Attack")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    Remove(main);
+                    Add(skills);
+                }
+            };
+            var defend = new Button(s, "Defend")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    BattleAction action = new BattleAction();
+                    action.command = BattleAction.Command.Defend;
+                    parent.battle.playerAction = action;
+                }
+            };
+            var move = new Button(s, "Move")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    mode = Mode.Move;
+                    selection = new bool[5] {false,false,false,false,false};
+                    selection[parent.battle.GetPosOfFighter(parent.currentFighter)] = true;
+                    selectAlly = true;
+                    fixedSelection = false;
+                    UpdateSelection();
+                    Remove(main);
+                    Add(aiming);
+                }
+            };
+            var flee = new Button(s, "Flee")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    BattleAction action = new BattleAction();
+                    action.command = BattleAction.Command.Flee;
+                    parent.battle.playerAction = action;
+                }
+            };
+            main.Add(attack);
+            main.Add(defend);
+            main.Add(move);
+            main.Add(flee);
+            Add(main);
+            var back = new Button(s, "Back")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    Remove(skills);
+                    Add(main);
+                }
+            };
+            var atk1 = new Button(s, "1")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    mode = Mode.Skill;
+                    skillSelected = 1;
+                    Remove(skills);
+                    Add(aiming);
+                }
+            };
+            var atk2 = new Button(s, "2")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    mode = Mode.Skill;
+                    skillSelected = 2;
+                    Remove(skills);
+                    Add(aiming);
+                }
+            };
+            var atk3 = new Button(s, "3")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    mode = Mode.Skill;
+                    skillSelected = 3;
+                    Remove(skills);
+                    Add(aiming);
+                }
+            };
+            skills.Add(back);
+            skills.Add(atk1);
+            skills.Add(atk2);
+            skills.Add(atk3);
+            var cancel = new Button(s, "Cancel")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    Remove(aiming);
+                    Add(main);
+                }
+            };
+            var confirm = new Button(s, "Confirm")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    if (mode == Mode.Skill)
+                    {
+                        BattleAction action = new BattleAction();
+                        if (skillSelected == 1)
+                        {
+                            action.command = BattleAction.Command.Attack1;
+                        }
+                        else if (skillSelected == 2)
+                        {
+                            action.command = BattleAction.Command.Attack2;
+                        }
+                        else if (skillSelected == 3)
+                        {
+                            action.command = BattleAction.Command.Attack3;
+                        }
+                        action.target = selection;
+                        parent.battle.playerAction = action;
+                    }
+                    else if (mode == Mode.Move)
+                    {
+                        BattleAction action = new BattleAction();
+                        action.command = BattleAction.Command.Move;
+                        action.target = selection;
+                        parent.battle.playerAction = action;
+                    }
+                }
+            };
+            aiming.Add(cancel);
+            aiming.Add(confirm);
+        }
+        public void UpdateSelection()
+        {
+            ObjectGroup effects = game.play.battle.CurrentMap.ObjectGroups["effects"];
+            ObjectGroup spots = game.play.battle.CurrentMap.ObjectGroups["spots"];
+            foreach (Squared.Tiled.Object i in selects)
+            {
+                effects.Objects.Remove(i.Name);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                if (selection[i] == true)
+                {
+                    Squared.Tiled.Object temp = new Squared.Tiled.Object();
+                    temp.Texture = game.Content.Load<Texture2D>("selection");
+                    Squared.Tiled.Object spot;
+                    if (selectAlly)
+                        spot = spots.Objects["A" + i];
+                    else
+                        spot = spots.Objects["B" + i];
+                    temp.X = spot.X + spot.Width / 2;
+                    temp.Y = spot.Y + spot.Height / 2;
+                    temp.Width = 64;
+                    temp.Height = 64;
+                    temp.Name = "selection" + i;
+                    selects.Add(temp);
+                    effects.Objects.Add("selection"+i,temp);
+                }
+            }
+        }
+        public void MoveSelection(bool up)
+        {
+            if (!fixedSelection)
+            {
+                if (up && selection[0] == false)
+                {
+                    selection[0] = selection[1];
+                    selection[1] = selection[2];
+                    selection[2] = selection[3];
+                    selection[3] = selection[4];
+                    selection[4] = false;
+                }
+                else if (!up && selection[4] == false)
+                {
+                    selection[4] = selection[3];
+                    selection[3] = selection[2];
+                    selection[2] = selection[1];
+                    selection[1] = selection[0];
+                    selection[0] = false;
+                }
+                UpdateSelection();
+            }
+        }
+        public void ResetVisibility()
+        {
+            if (main.Parent != this)
+            {
+                Add(main);
+            }
+            if (skills.Parent == this)
+            {
+                Remove(skills);
+            }
+            if (aiming.Parent == this)
+            {
+                Remove(aiming);
+            }
+        }
     }
 
     class MainOW : DockPanel
@@ -304,24 +608,24 @@ namespace Game1
 
     class HPBar : Bar
     {
-        Label value;
+        Label Value;
         public HPBar(IUIStyle s) : base(s)
         {
             txt.Text = "HP";
             bar.Color = Color.LightGreen;
-            value = new Label(s, "0/0")
+            Value = new Label(s, "0/0")
             {
                 Anchor = AnchoredRect.CreateFixed(0, 0, Width, Height),
                 Alignment = Alignment.End,
                 TextColor = Color.White
             };
-            Add(value);
+            Add(Value);
         }
         public new void Update(int current, int max)
         {
             percent = current / max;
             bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
-            value.Text = current + "/" + max;
+            Value.Text = current + "/" + max;
         }
         public new int Width
         {
@@ -331,6 +635,7 @@ namespace Game1
                 bg.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
                 bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
                 txt.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
+                Value.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
             }
             get { return width; }
         }
@@ -342,6 +647,7 @@ namespace Game1
                 bg.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
                 bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
                 txt.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
+                Value.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
             }
             get { return height; }
         }
@@ -349,24 +655,24 @@ namespace Game1
 
     class MPBar : Bar
     {
-        Label value;
+        Label Value;
         public MPBar(IUIStyle s) : base(s)
         {
             txt.Text = "MP";
             bar.Color = Color.Cyan;
-            value = new Label(s, "0/0")
+            Value = new Label(s, "0/0")
             {
                 Anchor = AnchoredRect.CreateFixed(0, 0, Width, Height),
                 Alignment = Alignment.End,
                 TextColor = Color.White
             };
-            Add(value);
+            Add(Value);
         }
         public new void Update(int current, int max)
         {
             percent = current / max;
             bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
-            value.Text = current + "/" + max;
+            Value.Text = current + "/" + max;
         }
         public new int Width
         {
@@ -376,6 +682,7 @@ namespace Game1
                 bg.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
                 bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
                 txt.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
+                Value.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
             }
             get { return width; }
         }
@@ -387,6 +694,7 @@ namespace Game1
                 bg.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
                 bar.Anchor = AnchoredRect.CreateFixed(0, 0, Convert.ToInt32(percent * width), height);
                 txt.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
+                Value.Anchor = AnchoredRect.CreateFixed(0, 0, width, height);
             }
             get { return height; }
         }

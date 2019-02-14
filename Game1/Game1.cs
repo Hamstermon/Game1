@@ -14,6 +14,7 @@ using Steropes.UI.Util;
 using Steropes.UI.Widgets;
 using Steropes.UI.Widgets.Container;
 using Steropes.UI.Widgets.TextWidgets;
+using Steropes.UI.Platform;
 using System.Xml;
 using Newtonsoft.Json;
 
@@ -63,12 +64,14 @@ namespace Game1
         //Screens
         MainMenu main;
         OverWorldMenu menu;
+        public Battle battle;
         public Playing play;
         public Level level;
         int elapsedTime = 0;
         int saveFileID = 1;
         public int mapID = 0;
         public bool pause = false;
+        public Fighter currentFighter;
         Random rng = new Random();
         
         public List<Attack> attacks = new List<Attack>();
@@ -99,7 +102,6 @@ namespace Game1
         {
             // TODO: Add your initialization logic here
             uiManager = UIManagerComponent.CreateAndInit(this, new InputManager(this), "Content").Manager;
-            
             var styleSystem = uiManager.UIStyle;
             var styles = styleSystem.LoadStyles("Content/style.xml", "UI/Metro", GraphicsDevice);
             styleSystem.StyleResolver.StyleRules.AddRange(styles);
@@ -107,7 +109,7 @@ namespace Game1
             main = new MainMenu(styleSystem, this);
             menu = new OverWorldMenu(styleSystem, this);
             play = new Playing(styleSystem, this, graphics);
-            
+
             using (StreamReader sr = new StreamReader("Content/attacks.txt"))
             using (JsonReader reader = new JsonTextReader(sr))
             {
@@ -350,7 +352,6 @@ namespace Game1
 
             }
             while (timer.ElapsedMilliseconds < milliseconds);
-            Console.WriteLine("waited");
         }
 
         public int[] CalculateStats(Character c)
@@ -429,21 +430,21 @@ namespace Game1
             Character c = CreateCharacter(0, 1, -1, -1, "Punch", "", "", true);
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
-            playerSaveData.Party[0] = -1;
-            playerSaveData.Party[1] = -1;
-            playerSaveData.Party[2] = index;
-            playerSaveData.Party[3] = -1;
-            playerSaveData.Party[4] = -1;
+            playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
         }
 
         public void LoadBattle(List<OverworldEnemy> enemies)
         {
             state = GameState.Battle;
-            Battle battle = new Battle(this);
+            battle = new Battle(this);
             string battlefieldName = SearchMap(mapID).BattleFileName;
             play.battle.Init(battlefieldName+".tmx", this, graphics);
-            play.battle.Visibility = Visibility.Visible;
-            play.mapWidget.Visibility = Visibility.Hidden;
+            play.Add(play.battle);
+            play.Add(play.battleUI);
+            play.Remove(play.mapWidget);
+            //play.battle.Visibility = Visibility.Visible;
+            //play.battleUI.Visibility = Visibility.Visible;
+            //play.mapWidget.Visibility = Visibility.Hidden;
             for (int i = 0; i < 5; i++)
             {
                 if (playerSaveData.Party[i] != -1)
@@ -452,12 +453,7 @@ namespace Game1
                     battle.AddFighter(c, battle.allies, i);
                 }
             }
-            bool[] occupied = new bool[5];
-            occupied[0] = false;
-            occupied[1] = false;
-            occupied[2] = false;
-            occupied[3] = false;
-            occupied[4] = false;
+            bool[] occupied = new bool[5] { false, false, false, false, false };
             for (int i = 0; i < 5; i++)
             {
                
@@ -474,7 +470,10 @@ namespace Game1
                     battle.AddFighter(e, battle.enemies, slot);
                 }
             }
-            level.viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
+            Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
+            play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
+
+            battle.TurnCycle();
         }
 
         public void LoadGame(int saveID)
@@ -595,7 +594,7 @@ namespace Game1
             }
             else if (State == GameState.Playing)
             {
-                if (play.trans.Visibility == Visibility.Visible)
+                if (play.trans.Parent == play)
                 {
                     Wait(1000);
                     play.TransitionVisible(false);
@@ -642,9 +641,55 @@ namespace Game1
             
         }
 
+        bool battleKeyDown = false;
         public void UpdateBattle() 
         {
-
+            currentFighter = battle.order[battle.turnNumber];
+            BattleAction action;
+            bool playerControlled = false;
+            if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
+            {
+                battleKeyDown = true;
+                play.battleUI.commands.MoveSelection(true);
+            }
+            else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
+            {
+                battleKeyDown = true;
+                play.battleUI.commands.MoveSelection(false);
+            }
+            else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
+            {
+                battleKeyDown = false;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.Down))
+            {
+                level.MoveCharacter(player, level.player, 2);
+            }
+            if (battle.GetTeam(currentFighter) == battle.allies)
+                playerControlled = true;
+            if (playerControlled)
+            {
+                if (play.battleUI.commands.Parent != play.battleUI)
+                {
+                    play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
+                    play.battleUI.commands.ResetVisibility();
+                }
+                //play.battleUI.commands.Visibility = Visibility.Visible;
+                if (battle.playerAction != null)
+                {
+                    Console.WriteLine("player turn");
+                    battle.Turn(currentFighter, battle.playerAction);
+                    play.battleUI.Remove(play.battleUI.commands);
+                    //play.battleUI.commands.Visibility = Visibility.Hidden;
+                    battle.playerAction = null;
+                }
+            }
+            else
+            {
+                action = battle.Ai(currentFighter);
+                battle.Turn(currentFighter, action);
+                Console.WriteLine("EnemyTurn");
+            }
         }
 
         public void UpdateEndGame()
@@ -673,11 +718,7 @@ namespace Game1
                 case GameState.EndGame:
                     DrawEndGame();
                     break;
-                case GameState.Playing:                    
-                    spriteBatch.Begin();
-                    //draws level
-                    level.Draw(spriteBatch, graphics.GraphicsDevice);
-                    spriteBatch.End();
+                case GameState.Playing:
                     break;
             }
 
@@ -686,7 +727,6 @@ namespace Game1
 
         public void DrawMainMenu()
         {
-            GraphicsDevice.Clear(Color.Black);
 
         }
 

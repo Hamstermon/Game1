@@ -316,7 +316,8 @@
 </data>
  </layer>
  <objectgroup name="5objects"/>
- <objectgroup name="spots" offsetx="-0.181818" offsety="-2.84217e-14">
+ <objectgroup name="effects"/>
+ <objectgroup name="spots">
   <object id="1" name="A0" x="624" y="512" width="48" height="48"/>
   <object id="3" name="A1" x="624" y="560" width="48" height="48"/>
   <object id="4" name="A2" x="624" y="608" width="48" height="48"/>
