@@ -20,6 +20,18 @@ namespace Game1
     }
     public class Fighter
     {
+        string name = "";
+        public string Name
+        {
+            set { name = value; }
+            get { return name; }
+        }
+        int id = 0;
+        public int ID
+        {
+            set { id = value; }
+            get { return id; }
+        }
         Character character;
         public Character Character
         {
@@ -44,6 +56,19 @@ namespace Game1
             set { time = value; }
             get { return time; }
         }
+        bool defending = false;
+        public bool Defending
+        {
+            set
+            {
+                defending = value;
+                if (value == true)
+                {
+                    currentMP = Convert.ToInt32(currentMP + mp * 0.2);
+                }
+            }
+            get { return defending; }
+        }
         int lvl;
         public int Level
         {
@@ -53,13 +78,27 @@ namespace Game1
         int currentHP;
         public int CurrentHP
         {
-            set { currentHP = value; }
+            set
+            {
+                currentHP = value;
+                if (currentHP > hp)
+                    currentHP = hp;
+                else if (currentHP < 0)
+                    currentHP = 0;
+            }
             get { return currentHP; }
         }
         int currentMP;
         public int CurrentMP
         {
-            set { currentMP = value; }
+            set
+            {
+                currentMP = value;
+                if (currentMP > mp)
+                    currentMP = mp;
+                else if (currentMP < 0)
+                    currentMP = 0;
+            }
             get { return currentMP; }
         }
         int hp = 0;
@@ -169,20 +208,20 @@ namespace Game1
             }
             get { return spdStage; }
         }
-        string skill1;
-        public string Skill1
+        int skill1;
+        public int Skill1
         {
             set { skill1 = value; }
             get { return skill1; }
         }
-        string skill2;
-        public string Skill2
+        int skill2;
+        public int Skill2
         {
             set { skill2 = value; }
             get { return skill2; }
         }
-        string skill3;
-        public string Skill3
+        int skill3;
+        public int Skill3
         {
             set { skill3 = value; }
             get { return skill3; }
@@ -212,10 +251,12 @@ namespace Game1
         MapWidget battlefield;
         BattleUI ui;
         public BattleAction playerAction;
+        public bool canFlee = true;
 
         public List<Fighter> chars = new List<Fighter>();
         public List<Fighter> order = new List<Fighter>();
-        public int turnNumber;
+        public int turnNumber = 0;
+        Random rng = new Random();
 
         public Battle(Game1 p)
         {
@@ -227,11 +268,17 @@ namespace Game1
         public void AddFighter(Character c, Fighter[] team, int slot)
         {
             Fighter f = new Fighter();
-            f.CurrentHP = c.CurrentHP;
-            f.CurrentMP = c.CurrentMP;
+            f.Name = parent.SearchChar(c.CharacterID).Name;
+            f.Level = c.Level;
+            f.ID = c.CharacterID;
             int[] stats = parent.CalculateStats(c);
             f.HP = stats[0];
             f.MP = stats[1];
+            f.CurrentHP = c.CurrentHP;
+            f.CurrentMP = c.CurrentMP;
+            Console.WriteLine("STAT" + stats[0]);
+            Console.WriteLine("HP" + f.HP);
+            Console.WriteLine("CHP" + f.CurrentHP);
             f.ATK = stats[2];
             f.DEF = stats[3];
             f.MAG = stats[4];
@@ -262,23 +309,30 @@ namespace Game1
             Squared.Tiled.Object charObj = parent.CreateObject(info.Name,info.SpriteSheet,info.SpriteIndex,x,y,size,size);
             battlefield.CurrentMap.ObjectGroups["5objects"].Objects.Add(info.Name + slotName, charObj);
             parent.GetCurrentFrame(charObj, xOffset);
+            f.Char = charObj;
             team[slot] = f;
         }
 
         public void AddFighter(OverworldEnemy c, Fighter[] team, int slot)
         {
             Fighter f = new Fighter();
+            f.Name = parent.SearchChar(c.CharacterID).Name;
+            f.Level = c.Level;
+            f.ID = c.CharacterID;
             int[] stats = parent.CalculateStats(parent.SearchChar(c.CharacterID),c.Level);
-            f.CurrentHP = stats[0];
-            f.CurrentMP = stats[1];
             f.HP = stats[0];
             f.MP = stats[1];
+            f.CurrentHP = stats[0];
+            f.CurrentMP = stats[1];
+            Console.WriteLine("STAT" + stats[0]);
+            Console.WriteLine("HP" + f.HP);
+            Console.WriteLine("CHP" + f.CurrentHP);
             f.ATK = stats[2];
             f.DEF = stats[3];
             f.MAG = stats[4];
             f.RES = stats[5];
             f.SPD = stats[6];
-            string[] skills = parent.GetFirstSkills(c.CharacterID, c.Level);
+            int[] skills = parent.GetFirstSkills(c.CharacterID, c.Level);
             f.Skill1 = skills[0];
             f.Skill2 = skills[1];
             f.Skill3 = skills[2];
@@ -303,34 +357,100 @@ namespace Game1
             Squared.Tiled.Object charObj = parent.CreateObject(info.Name, info.SpriteSheet, info.SpriteIndex, x, y, size, size);
             battlefield.CurrentMap.ObjectGroups["5objects"].Objects.Add(info.Name + slotName, charObj);
             parent.GetCurrentFrame(charObj, xOffset);
+            f.Char = charObj;
             team[slot] = f;
+        }
+        
+        public void UpdateFighters()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                Fighter fighter = allies[i];
+                if (fighter != null)
+                {
+                    Squared.Tiled.Object chr = fighter.Char;
+                    string slotName = "";
+                    int xOffset = 4;
+                    slotName = "A" + i;
+                    if (fighter.CurrentHP == 0)
+                        xOffset = 21;
+                    Squared.Tiled.Object slotObj = battlefield.CurrentMap.ObjectGroups["spots"].Objects[slotName];
+                    int x = slotObj.X + slotObj.Width / 2;
+                    int y = slotObj.Y + slotObj.Height / 2;
+                    chr.X = x;
+                    chr.Y = y;
+                    chr.Texture = parent.GetCurrentFrame(chr, xOffset);
+                }
+                fighter = enemies[i];
+                if (fighter != null)
+                {
+                    Squared.Tiled.Object chr = fighter.Char;
+                    string slotName = "";
+                    int xOffset = 4;
+                    slotName = "B" + i;
+                    xOffset = 12;
+                    if (fighter.CurrentHP == 0)
+                        xOffset = 27;
+                    Squared.Tiled.Object slotObj = battlefield.CurrentMap.ObjectGroups["spots"].Objects[slotName];
+                    int x = slotObj.X + slotObj.Width / 2;
+                    int y = slotObj.Y + slotObj.Height / 2;
+                    chr.X = x;
+                    chr.Y = y;
+                    chr.Texture = parent.GetCurrentFrame(chr, xOffset);
+                }
+            }
+            ui.RefreshFighters();
         }
 
         public BattleAction Ai(Fighter i)
         {
             BattleAction action = new BattleAction();
+            CharData data = parent.SearchChar(i.ID);
+            if (data.BattleAI == "Default")
+            {
+                bool valid = false;
+                do
+                {
+                    int skill = rng.Next(1, 3);
+                    List<bool[]> selections;
+                }
+                while (valid == false);
+            }
             return action;
         }
 
         public void TurnCycle()
         {
+            Console.WriteLine("NEW TURN");
+            chars = new List<Fighter>();
+            order = new List<Fighter>();
             foreach (Fighter i in allies)
             {
                 if (i != null)
                 {
                     if (i.CurrentHP > 0)
+                    {
+                        Console.WriteLine("DED");
                         chars.Add(i);
+                    }
                 }
             }
+            
             foreach (Fighter i in enemies)
             {
                 if (i != null)
                 {
                     if (i.CurrentHP > 0)
+                    {
+                        Console.WriteLine("DED");
                         chars.Add(i);
+                    }
                 }
             }
-            for (int i = 0; i < chars.Count; i++)
+            Console.WriteLine("b4");
+            Console.WriteLine(chars.Count);
+            Console.WriteLine(order.Count);
+            do
             {
                 Fighter fastest = new Fighter();
                 foreach (Fighter x in chars)
@@ -343,21 +463,132 @@ namespace Game1
                 order.Add(fastest);
                 chars.Remove(fastest);
             }
+            while (chars.Count > 0);
+            Console.WriteLine("");
+            Console.WriteLine(chars.Count);
+            Console.WriteLine(order.Count);
             turnNumber = 0;
         }
 
         public void Turn(Fighter fighter, BattleAction action)
         {
+            bool successful = true;
+            bool[] selection = ui.commands.selection;
             ui.commands.selection = new bool[5] { false, false, false, false, false };
             ui.commands.UpdateSelection();
-            if (action.command == BattleAction.Command.Move)
+            fighter.Defending = false;
+            Fighter[] team = GetTeam(fighter);
+            Fighter[] enemyTeam;
+            Attack atkData;
+            if (team == allies)
+                enemyTeam = enemies;
+            else
+                enemyTeam = allies;
+            switch (action.command)
+            {
+                case BattleAction.Command.Attack1:
+                    atkData = parent.SearchAttack(fighter.Skill1);
+                    Attack(fighter, enemyTeam, selection, atkData);
+                    break;
+                case BattleAction.Command.Attack2:
+                    atkData = parent.SearchAttack(fighter.Skill2);
+                    Attack(fighter, enemyTeam, selection, atkData);
+                    break;
+                case BattleAction.Command.Attack3:
+                    atkData = parent.SearchAttack(fighter.Skill3);
+                    Attack(fighter, enemyTeam, selection, atkData);
+                    break;
+                case BattleAction.Command.Defend:
+                    fighter.Defending = true;
+                    break;
+                case BattleAction.Command.Move:
+                    successful = false;
+                    int newPos = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (action.target[i] == true)
+                        {
+                            newPos = i;
+                            break;
+                        }
+                    }
+                    Fighter other = team[newPos];
+                    if (other == null)
+                    {
+                        int pos = GetPosOfFighter(fighter);
+                        team[pos] = null;
+                        team[newPos] = fighter;
+                    }
+                    break;
+                case BattleAction.Command.Flee:
+                    if (canFlee)
+                    {
+                        EndBattle(true);
+                    }
+                    break;
+            }
+            UpdateFighters();
+            if (successful)
+            {
+                turnNumber++;
+                if (turnNumber >= order.Count)
+                {
+                    TurnCycle();
+                }
+            }
+        }
+
+        public void Attack(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
+        {
+            int attack = 0;
+            if (data.Category == "Physical")
+                attack = attacker.ATK;
+            else if (data.Category == "Magical")
+                attack = attacker.MAG;
+            bool fullPower = true;
+            int power = data.Power;
+            if (attacker.CurrentMP < data.MP)
+            {
+                power = power * (attacker.CurrentMP / data.MP);
+                fullPower = false;
+            }
+            attacker.CurrentMP = attacker.CurrentMP - data.MP;
+            for (int i = 0; i < 5; i++)
+            {
+                Fighter defender = target[i];
+                if (selection[i] == true && defender != null)
+                {
+                    int defense = 0;
+                    if (data.Category == "Physical")
+                        defense = defender.DEF;
+                    else if (data.Category == "Magical")
+                        defense = defender.RES;
+                    bool hit = true;
+                    int damage = 0;
+                    if (rng.Next(1, 1000) > data.Accuracy * 10)
+                        hit = false;
+                    if (hit)
+                    {
+                        damage = attack * data.Power / defense;
+                        defender.CurrentHP = defender.CurrentHP - damage;
+                    }
+                    if (fullPower)
+                    {
+                        Effect(attacker, defender, data.Effect1Name, data.Effect1Chance, damage);
+                        Effect(attacker, defender, data.Effect2Name, data.Effect2Chance, damage);
+                    }
+                }
+            }
+        }
+
+        public void Effect(Fighter attacker, Fighter defender, string effect, int chance, int damage)
+        {
+            bool hit = true;
+            if (rng.Next(1, 1000) > chance * 10)
+                hit = false;
+            if (hit)
             {
 
-            }
-            turnNumber++;
-            if (turnNumber >= order.Count)
-            {
-                TurnCycle();
             }
         }
 
@@ -392,6 +623,28 @@ namespace Game1
                 }
             }
             return team;
+        }
+
+        public void EndBattle(bool fled)
+        {
+            parent.State = Game1.GameState.Playing;
+            if (!fled)
+            {
+
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                Fighter fighter = allies[i];
+                if (fighter != null)
+                {
+                    fighter.Character.CurrentHP = fighter.CurrentHP;
+                    fighter.Character.CurrentMP = fighter.CurrentMP;
+                }
+            }
+            parent.play.Remove(parent.play.battle);
+            parent.play.Remove(parent.play.battleUI);
+            parent.play.Add(parent.play.mapWidget);
+            parent.pause = false;
         }
     }
 }

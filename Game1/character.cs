@@ -38,20 +38,20 @@ namespace Game1
             set { currentMP = value; }
             get { return currentMP; }
         }
-        string skill1;
-        public string Skill1
+        int skill1;
+        public int Skill1
         {
             set { skill1 = value; }
             get { return skill1; }
         }
-        string skill2;
-        public string Skill2
+        int skill2;
+        public int Skill2
         {
             set { skill2 = value; }
             get { return skill2; }
         }
-        string skill3;
-        public string Skill3
+        int skill3;
+        public int Skill3
         {
             set { skill3 = value; }
             get { return skill3; }

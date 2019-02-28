@@ -352,39 +352,35 @@ namespace Game1
 
             }
             while (timer.ElapsedMilliseconds < milliseconds);
+            timer.Stop();
         }
 
         public int[] CalculateStats(Character c)
         {
             int[] stats = new int[7];
             CharData data = SearchChar(c.CharacterID);
-            stats[0] = 50 + (data.HP * (2 + (2 / 5) * c.Level)) / 8;
-            stats[1] = 50 + (data.MP * (2 + (2 / 5) * c.Level)) / 8;
-            stats[2] = 10 + (data.ATK * (2 + (2 / 5) * c.Level)) / 40;
-            stats[3] = 10 + (data.DEF * (2 + (2 / 5) * c.Level)) / 40;
-            stats[4] = 10 + (data.MAG * (2 + (2 / 5) * c.Level)) / 40;
-            stats[5] = 10 + (data.RES * (2 + (2 / 5) * c.Level)) / 40;
-            stats[6] = 10 + (data.SPD * (2 + (2 / 5) * c.Level)) / 40;
+            stats = CalculateStats(data, c.Level);
             return stats;
         }
 
         public int[] CalculateStats(CharData data, int level)
         {
             int[] stats = new int[7];
-            stats[0] = 50 + (data.HP * (2 + (2 / 5) * level)) / 8;
-            stats[1] = 50 + (data.MP * (2 + (2 / 5) * level)) / 8;
-            stats[2] = 10 + (data.ATK * (2 + (2 / 5) * level)) / 40;
-            stats[3] = 10 + (data.DEF * (2 + (2 / 5) * level)) / 40;
-            stats[4] = 10 + (data.MAG * (2 + (2 / 5) * level)) / 40;
-            stats[5] = 10 + (data.RES * (2 + (2 / 5) * level)) / 40;
-            stats[6] = 10 + (data.SPD * (2 + (2 / 5) * level)) / 40;
+            stats[0] = (int)(50.0 + ((double)data.HP * (2.0 + (2.0 / 5.0) * (double)level)) / 8.0);
+            stats[1] = (int)(50.0 + ((double)data.MP * (2.0 + (2.0 / 5.0) * (double)level)) / 8.0);
+            stats[2] = (int)(10.0 + ((double)data.ATK * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
+            stats[3] = (int)(10.0 + ((double)data.DEF * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
+            stats[4] = (int)(10.0 + ((double)data.MAG * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
+            stats[5] = (int)(10.0 + ((double)data.RES * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
+            stats[6] = (int)(10.0 + ((double)data.SPD * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
+            Console.WriteLine("hp" + stats[0]);
             return stats;
         }
 
-        public string[] GetFirstSkills(int charID, int level)
+        public int[] GetFirstSkills(int charID, int level)
         {
-            string[] skills = new string[3];
-            int[] levels = new int[3];
+            int[] skills = new int[3] { -1, -1, -1 };
+            int[] levels = new int[3] { -1, -1, -1 };
             List<CharAttack> movepool = FilterCharAttack(charID);
             foreach (CharAttack a in movepool)
             {
@@ -392,7 +388,7 @@ namespace Game1
                 {
                     if (levels[i] < a.Level && levels[i] <= levels[0] && levels[i] <= levels[1] && levels[i] <= levels[2])
                     {
-                        skills[i] = SearchAttack(a.AttackID).Name;
+                        skills[i] = SearchAttack(a.AttackID).AttackID;
                         levels[i] = a.Level;
                         break;
                     }
@@ -401,7 +397,7 @@ namespace Game1
             return skills;
         }
 
-        public Character CreateCharacter(int id, int lvl, int hp, int mp, string skill1, string skill2, string skill3, bool available)
+        public Character CreateCharacter(int id, int lvl, int hp, int mp, int skill1, int skill2, int skill3, bool available)
         {
             Character c = new Character();
             c.CharacterID = id;
@@ -427,7 +423,7 @@ namespace Game1
         {
             saveFileID = saveID;
             state = GameState.Playing;
-            Character c = CreateCharacter(0, 1, -1, -1, "Punch", "", "", true);
+            Character c = CreateCharacter(0, 5, -1, -1, 0, 0, 0, true);
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
             playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
@@ -451,6 +447,7 @@ namespace Game1
                 {
                     Character c = playerSaveData.CharacterList[playerSaveData.Party[i]];
                     battle.AddFighter(c, battle.allies, i);
+                    Console.WriteLine("add ally");
                 }
             }
             bool[] occupied = new bool[5] { false, false, false, false, false };
@@ -468,11 +465,12 @@ namespace Game1
                     while (occupied[slot] == true);
                     occupied[slot] = true;
                     battle.AddFighter(e, battle.enemies, slot);
+                    Console.WriteLine("add enemy");
                 }
             }
             Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
             play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
-
+            play.battleUI.RefreshFighters();
             battle.TurnCycle();
         }
 
@@ -673,6 +671,10 @@ namespace Game1
                 {
                     play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
                     play.battleUI.commands.ResetVisibility();
+                    Attack atk1 = SearchAttack(currentFighter.Skill1);
+                    Attack atk2 = SearchAttack(currentFighter.Skill2);
+                    Attack atk3 = SearchAttack(currentFighter.Skill3);
+                    play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
                 }
                 //play.battleUI.commands.Visibility = Visibility.Visible;
                 if (battle.playerAction != null)

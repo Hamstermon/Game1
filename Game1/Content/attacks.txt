@@ -1,1 +1,1 @@
-[]
+[{"AttackID":0,"Name":"Punch","Type":"Normal","Category":"Physical","Zones":"00X00","Fixed":false,"Power":30,"Accuracy":99,"Priority":0,"MP":5,"Effect1Name":"","Effect1Chance":0,"Effect2Name":"","Effect2Chance":0,"Description":"Punch the target"}]

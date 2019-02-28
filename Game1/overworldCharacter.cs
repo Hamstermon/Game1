@@ -122,6 +122,12 @@ namespace Game1
             set { lvl = value; }
             get { return lvl; }
         }
+        bool despawn = false;
+        public bool Despawn
+        {
+            set { despawn = value; }
+            get { return despawn; }
+        }
     }
 
     public class OverworldPlayer : OverworldChar

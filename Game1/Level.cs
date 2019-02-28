@@ -27,7 +27,7 @@ namespace Game1
         Game1 game;
         public Squared.Tiled.Object player;
         Random rng = new Random();
-        List<OverworldEnemy> enemies = new List<OverworldEnemy>();
+        public List<OverworldEnemy> enemies = new List<OverworldEnemy>();
         List<MapChar> enemySpawnPool = new List<MapChar>();
         int totalEnemyCount = 0;
         int noOfTurns;
@@ -76,7 +76,7 @@ namespace Game1
             for (int i = 0; i < 4; i++)
             {
                 MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
-                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID]);
+                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID], rng.Next(selected.MinLevel * 100, selected.MaxLevel * 100) / 100);
                 enemies.Add(newEnemy);
             }
         }
@@ -105,6 +105,7 @@ namespace Game1
 
         public void Update(GraphicsDeviceManager g, GameTime gameTime)
         {
+            bool battleEngaged = false;
             if (game.pause == false)
             {
                 cameraFocus = player;
@@ -112,36 +113,42 @@ namespace Game1
                 viewportPosition = new Vector2(cameraFocus.X - (g.PreferredBackBufferWidth / 2), cameraFocus.Y - (g.PreferredBackBufferHeight / 2));
                 foreach (OverworldEnemy enemy in enemies)
                 {
-                    if (enemy.AIType == "Default")
+                    if (enemy.Despawn == false)
                     {
-                        bool successful = MoveCharacter(enemy, enemy.Character, enemy.Direction);
-                        if (!successful)
+                        if (enemy.AIType == "Default")
                         {
-                            int random = rng.Next(0, 300);
-                            if (random <= 75)
-                                enemy.Direction = 0;
-                            else if (random <= 150)
-                                enemy.Direction = 1;
-                            else if (random <= 225)
-                                enemy.Direction = 2;
-                            else
-                                enemy.Direction = 3;
+                            bool successful = MoveCharacter(enemy, enemy.Character, enemy.Direction);
+                            if (!successful)
+                            {
+                                int random = rng.Next(0, 300);
+                                if (random <= 75)
+                                    enemy.Direction = 0;
+                                else if (random <= 150)
+                                    enemy.Direction = 1;
+                                else if (random <= 225)
+                                    enemy.Direction = 2;
+                                else
+                                    enemy.Direction = 3;
+                            }
                         }
-                    }
-                    enemy.Animation(gameTime);
-                    bool fight = CheckCollisionBattle(enemy);
-                    if (fight)
-                    {
-                        game.pause = true;
-                        List<OverworldEnemy> fighters = GetEnemies(enemy.Character.X, enemy.Character.Y, 256);
-                        foreach (OverworldEnemy e in fighters)
+                        enemy.Animation(gameTime);
+                        bool fight = CheckCollisionBattle(enemy);
+                        if (fight)
                         {
-                            game.GetCurrentFrame(e, e.Character, 29);
+                            battleEngaged = true;
+                            game.pause = true;
+                            List<OverworldEnemy> fighters = GetEnemies(enemy.Character.X, enemy.Character.Y, 256, true);
+                            foreach (OverworldEnemy e in fighters)
+                            {
+                                game.GetCurrentFrame(e, e.Character, 29);
+                            }
+                            game.LoadBattle(fighters);
                         }
-                        game.LoadBattle(fighters);
                     }
                 }
                 game.player.Animation(gameTime);
+                if (battleEngaged)
+                    SpawnCycle();
             }
         }
 
@@ -255,7 +262,7 @@ namespace Game1
             objects.Objects.Add("player", player);
         }
 
-        private OverworldEnemy CreateEnemy(CharData data)
+        private OverworldEnemy CreateEnemy(CharData data, int level)
         {
             OverworldEnemy enemy = new OverworldEnemy();
             Vector2 pos = FindSpawnLocation();
@@ -275,6 +282,7 @@ namespace Game1
             enemy.SpriteSheet = data.SpriteSheet;
             enemy.SpriteIndex = data.SpriteIndex;
             enemy.CharacterID = data.CharID;
+            enemy.Level = level;
             totalEnemyCount++;
             return enemy;
         }
@@ -286,12 +294,19 @@ namespace Game1
             foreach (OverworldEnemy i in enemies)
             {
                 Vector2 charPos = new Vector2(i.Character.X, i.Character.Y);
-                double magnitude = Math.Sqrt(Math.Pow((playerPos.X - charPos.X), 2) + Math.Pow((playerPos.Y - charPos.Y), 2));
-                if (magnitude >= 512.0)
+                if (i.Despawn == true)
                 {
-                    if (rng.Next(0,100) < 50)
+                    toRemove.Add(i);
+                }
+                else
+                {
+                    double magnitude = Math.Sqrt(Math.Pow((playerPos.X - charPos.X), 2) + Math.Pow((playerPos.Y - charPos.Y), 2));
+                    if (magnitude >= 512.0)
                     {
-                        toRemove.Add(i);
+                        if (rng.Next(0, 100) < 50)
+                        {
+                            toRemove.Add(i);
+                        }
                     }
                 }
             }
@@ -303,7 +318,7 @@ namespace Game1
             if (enemies.Count < mapData.SpawnCap)
             {
                 MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
-                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID]);
+                OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID], rng.Next(selected.MinLevel*100,selected.MaxLevel*100)/100);
                 enemies.Add(newEnemy);
             }
         }
@@ -330,7 +345,7 @@ namespace Game1
             return check;
         }
 
-        private List<OverworldEnemy> GetEnemies(int x, int y, int range)
+        private List<OverworldEnemy> GetEnemies(int x, int y, int range, bool despawn)
         {
             List<OverworldEnemy> fighters = new List<OverworldEnemy>();
             foreach (OverworldEnemy e in enemies)
@@ -338,6 +353,7 @@ namespace Game1
                 double magnitude = Math.Sqrt(Math.Pow((e.Character.X - x), 2) + Math.Pow((e.Character.Y - y), 2));
                 if (magnitude <= range)
                 {
+                    e.Despawn = despawn;
                     fighters.Add(e);
                 }
             }
@@ -392,7 +408,6 @@ namespace Game1
                     if (playrec.Intersects(objrec))
                     {
                         ChangeMap(entity.Value);
-                        
                         break;
                     }
                 }
