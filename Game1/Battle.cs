@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Squared.Tiled;
 using Steropes.UI.Components;
+using System;
 
 namespace Game1
 {
@@ -402,20 +403,165 @@ namespace Game1
             ui.RefreshFighters();
         }
 
+        public (bool[],bool) LoadSelection(Attack atk, Fighter[] team)
+        {
+            bool fixedSelection = atk.Fixed;
+            bool[] selection = new bool[5] { false, false, false, false, false };
+            Fighter[] targets;
+            if (team == allies)
+            {
+                if (atk.Power > 0)
+                    targets = enemies;
+                else
+                    targets = allies;
+            }
+            else
+            {
+                if (atk.Power > 0)
+                    targets = allies;
+                else
+                    targets = enemies;
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                string letter = atk.Zones.Substring(i, 1);
+                if (letter == "0")
+                    selection[i] = false;
+                else if (letter == "X")
+                    selection[i] = true;
+            }
+            if (!fixedSelection)
+            {
+                List<bool[]> preSelects = GetAllPositions(selection,targets);
+                if (preSelects.Count > 0)
+                {
+                    bool[] best = preSelects[0];
+                    int count = 0;
+                    foreach (bool[] s in preSelects)
+                    {
+                        int myCount = 0;
+                        for (int i = 0; i < 5; i++)
+                        {
+                            if (s[i] == true && targets[i] != null && targets[i].CurrentHP > 0)
+                            {
+                                myCount++;
+                            }
+                        }
+                        if (myCount > count)
+                        {
+                            best = s;
+                            count = myCount;
+                        }
+                    }
+                    selection = best;
+                }
+            }
+            return (selection,fixedSelection);
+        }
+        public List<bool[]> GetAllPositions(bool[] selection, Fighter[] targets)
+        {
+            List<bool[]> preSelects = new List<bool[]>();
+            bool[] s1 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+            bool[] s2 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+            bool[] s3 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+            bool[] s4 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+            bool[] s5 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+            s2 = ui.commands.MoveSelection(s2, true);
+            s3 = ui.commands.MoveSelection(s3, false);
+            s4 = ui.commands.MoveSelection(ui.commands.MoveSelection(s4, true), true);
+            s5 = ui.commands.MoveSelection(ui.commands.MoveSelection(s5, false), false);
+            preSelects.Add(s1);
+            if (s2 != s1)
+                preSelects.Add(s2);
+            if (s3 != s2 && s3 != s1)
+                preSelects.Add(s3);
+            if (s4 != s3 && s4 != s2 && s4 != s1)
+                preSelects.Add(s4);
+            if (s5 != s4 && s5 != s3 && s5 != s2 && s5 != s1)
+                preSelects.Add(s5);
+            List<bool[]> toRemove = new List<bool[]>();
+            foreach (bool[] s in preSelects)
+            {
+                bool exist = false;
+                for (int i = 0; i < 5; i++)
+                {
+                    if (s[i] == true && targets[i] != null && targets[i].CurrentHP > 0)
+                    {
+                        exist = true;
+                        break;
+                    }
+                }
+                if (!exist)
+                    toRemove.Add(s);
+            }
+            foreach(bool[] s in toRemove)
+            {
+                preSelects.Remove(s);
+            }
+            return preSelects;
+        }
+
         public BattleAction Ai(Fighter i)
         {
+            Console.WriteLine("AI THINK");
             BattleAction action = new BattleAction();
             CharData data = parent.SearchChar(i.ID);
+            bool[] select = new bool[5] { false, false, false, false, false };
             if (data.BattleAI == "Default")
             {
-                bool valid = false;
+                //bool valid = false;
                 do
                 {
                     int skill = rng.Next(1, 3);
+                    bool[] selection;
+                    bool fixedSelection;
+                    Attack atk;
+                    if (skill == 1)
+                    {
+                        atk = parent.SearchAttack(i.Skill1);
+                        action.command = BattleAction.Command.Attack1;
+                    }
+                    else if (skill == 2)
+                    {
+                        atk = parent.SearchAttack(i.Skill2);
+                        action.command = BattleAction.Command.Attack2;
+                    }
+                    else
+                    {
+                        atk = parent.SearchAttack(i.Skill3);
+                        action.command = BattleAction.Command.Attack3;
+                    }
+                    (selection,fixedSelection) = LoadSelection(atk, enemies);
                     List<bool[]> selections;
+                    if (!fixedSelection)
+                    {
+                        if (atk.Power > 0)
+                            selections = GetAllPositions(selection, allies);
+                        else
+                            selections = GetAllPositions(selection, enemies);
+                    }
+                    else
+                    {
+                        selections = new List<bool[]>();
+                        selections.Add(selection);
+                    }
+                    if (selections.Count > 0)
+                    {
+                        bool[] temp = selections[rng.Next(0, selections.Count)];
+                        select[0] = temp[0];
+                        select[1] = temp[1];
+                        select[2] = temp[2];
+                        select[3] = temp[3];
+                        select[4] = temp[4];
+                        //Console.WriteLine("CHOSEN SELECTION:" + select[0] + select[1] + select[2] + select[3] + select[4]);
+                        break;
+                    }
                 }
-                while (valid == false);
+                while (true);
+                action.target = select;
             }
+            //Console.WriteLine("CHOSEN SELECTION:" + select[0] + select[1] + select[2] + select[3] + select[4]);
+            //Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
             return action;
         }
 
@@ -430,7 +576,6 @@ namespace Game1
                 {
                     if (i.CurrentHP > 0)
                     {
-                        Console.WriteLine("DED");
                         chars.Add(i);
                     }
                 }
@@ -442,14 +587,10 @@ namespace Game1
                 {
                     if (i.CurrentHP > 0)
                     {
-                        Console.WriteLine("DED");
                         chars.Add(i);
                     }
                 }
             }
-            Console.WriteLine("b4");
-            Console.WriteLine(chars.Count);
-            Console.WriteLine(order.Count);
             do
             {
                 Fighter fastest = new Fighter();
@@ -464,16 +605,13 @@ namespace Game1
                 chars.Remove(fastest);
             }
             while (chars.Count > 0);
-            Console.WriteLine("");
-            Console.WriteLine(chars.Count);
-            Console.WriteLine(order.Count);
             turnNumber = 0;
         }
 
         public void Turn(Fighter fighter, BattleAction action)
         {
             bool successful = true;
-            bool[] selection = ui.commands.selection;
+            bool[] selection = action.target;
             ui.commands.selection = new bool[5] { false, false, false, false, false };
             ui.commands.UpdateSelection();
             fighter.Defending = false;
@@ -540,6 +678,8 @@ namespace Game1
 
         public void Attack(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
         {
+            Console.WriteLine("COMMENCE " + attacker.Name + attacker.Level + "'s ATTACK");
+            Console.WriteLine(selection[0] + " " + selection[1] + " " + selection[2] + " " + selection[3] + " " + selection[4]);
             int attack = 0;
             if (data.Category == "Physical")
                 attack = attacker.ATK;
@@ -558,6 +698,7 @@ namespace Game1
                 Fighter defender = target[i];
                 if (selection[i] == true && defender != null)
                 {
+                    Console.WriteLine("TARGET FIND");
                     int defense = 0;
                     if (data.Category == "Physical")
                         defense = defender.DEF;
@@ -571,6 +712,7 @@ namespace Game1
                     {
                         damage = attack * data.Power / defense;
                         defender.CurrentHP = defender.CurrentHP - damage;
+                        Console.WriteLine("DAMAGE DEAL");
                     }
                     if (fullPower)
                     {

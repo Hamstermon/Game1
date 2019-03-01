@@ -98,11 +98,10 @@ namespace Game1
                 
                 players.Add(temp, DockPanelConstraint.Left);
             }
-            commands = new BattleCommands(s, parent); //{ Anchor = AnchoredRect.CreateFixed(0, height / 9, width/4, 7*height/9) };
+            commands = new BattleCommands(s, parent);;
             grid.Add(enemies);
             grid.Add(players);
             Add(grid);
-            //Add(commands);
         }
         public void RefreshFighters()
         {
@@ -171,7 +170,7 @@ namespace Game1
                 if (value == "")
                     l.Text = "";
                 else
-                    l.Text = "LV: " + value;
+                    l.Text = "Lv." + value;
             }
         }
     }
@@ -276,7 +275,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(parent.SearchAttack(parent.currentFighter.Skill1));
+                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };
@@ -291,7 +291,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(parent.SearchAttack(parent.currentFighter.Skill2));
+                        (selection,fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };
@@ -306,7 +307,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(parent.SearchAttack(parent.currentFighter.Skill3));
+                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };
@@ -372,61 +374,7 @@ namespace Game1
             aiming.Add(cancel);
             aiming.Add(confirm);
         }
-        public void LoadSelection(Attack atk)
-        {
-            fixedSelection = atk.Fixed;
-            selection = new bool[5] { false, false, false, false, false };
-            for (int i = 0; i < 5; i++)
-            {
-                string letter = atk.Zones.Substring(i, 1);
-                if (letter == "0")
-                    selection[i] = false;
-                else if (letter == "X")
-                    selection[i] = true;
-            }
-            if (!fixedSelection)
-            {
-                List<bool[]> preSelects = new List<bool[]>();
-                bool[] s1 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
-                bool[] s2 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
-                bool[] s3 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
-                bool[] s4 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
-                bool[] s5 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
-                s2 = MoveSelection(s2, true);
-                s3 = MoveSelection(s3, false);
-                s4 = MoveSelection(MoveSelection(s4, true), true);
-                s5 = MoveSelection(MoveSelection(s5, false), false);
-                preSelects.Add(s1);
-                preSelects.Add(s2);
-                preSelects.Add(s3);
-                preSelects.Add(s4);
-                preSelects.Add(s5);
-                bool[] best = preSelects[0];
-                int count = 0;
-                foreach (bool[] s in preSelects)
-                {
-                    Console.WriteLine("new selection");
-                    Console.WriteLine(s[0] + "" + s[1] + "" + s[2] + "" + s[3] + "" + s[4]);
-                    int myCount = 0;
-                    for (int i = 0; i < 5; i++)
-                    {
-                        if (s[i] == true && game.battle.enemies[i] != null && game.battle.enemies[i].CurrentHP > 0)
-                        {
-                            myCount++;
-                            Console.WriteLine("lol an enemy");
-                        }
-                    }
-                    if (myCount > count)
-                    {
-                        Console.WriteLine("i am bettur");
-                        best = s;
-                        count = myCount;
-                    }
-                }
-                selection = best;
-            }
-            UpdateSelection();
-        }
+
         public void UpdateSelection()
         {
             ObjectGroup effects = game.play.battle.CurrentMap.ObjectGroups["effects"];
@@ -533,7 +481,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(game.SearchAttack(game.currentFighter.Skill1));
+                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };
@@ -548,7 +497,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(game.SearchAttack(game.currentFighter.Skill2));
+                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };
@@ -563,7 +513,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        LoadSelection(game.SearchAttack(game.currentFighter.Skill3));
+                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
+                        UpdateSelection();
                     }
                 }
             };

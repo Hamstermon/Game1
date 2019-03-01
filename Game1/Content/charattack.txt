@@ -1,1 +1,1 @@
-[]
+[{"ID":0,"CharID":0,"AttackID":0,"Level":0},{"ID":1,"CharID":1,"AttackID":0,"Level":0}]

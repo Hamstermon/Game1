@@ -689,6 +689,7 @@ namespace Game1
             else
             {
                 action = battle.Ai(currentFighter);
+                Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
                 battle.Turn(currentFighter, action);
                 Console.WriteLine("EnemyTurn");
             }
