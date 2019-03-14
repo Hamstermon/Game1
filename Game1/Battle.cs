@@ -19,6 +19,61 @@ namespace Game1
         Frozen,
         Confused
     }
+    public enum BattleResult
+    {
+        None,
+        PlayerWin,
+        EnemyWin
+    }
+    public enum BattleState
+    {
+        Regular,
+        Animation
+    }
+    public enum AnimationType
+    {
+        Hit,
+        Fire,
+        Water,
+        Leaf,
+        Electric
+    }
+    public enum CharAnimation
+    {
+        None,
+        Physical,
+        Ranged,
+        Happy,
+        Hit
+    }
+    public class BattleAnimation
+    {
+        AnimationType skillA;
+        public AnimationType SkillAnimation
+        {
+            get { return skillA; }
+            set { skillA = value; }
+        }
+        CharAnimation charA;
+        public CharAnimation CharacterAnimation
+        {
+            get { return charA; }
+            set { charA = value; }
+        }
+        CharAnimation targA;
+        public CharAnimation TargetAnimation
+        {
+            get { return targA; }
+            set { targA = value; }
+        }
+        bool[] selection = new bool[5] { false, false, false, false, false };
+        public bool[] Selection
+        {
+            set { selection = value; }
+            get { return selection; }
+        }
+    }
+    
     public class Fighter
     {
         string name = "";
@@ -242,8 +297,7 @@ namespace Game1
         public Command command;
         public bool[] target = new bool[5] { false, false, false, false, false };
     }
-
-
+    
     public class Battle
     {
         public Fighter[] allies = new Fighter[5];
@@ -258,6 +312,34 @@ namespace Game1
         public List<Fighter> order = new List<Fighter>();
         public int turnNumber = 0;
         Random rng = new Random();
+
+        public Fighter tempFighter; //fighter, enemyTeam, selection, atkData
+        public Fighter[] tempEnemyTeam;
+        public bool[] tempSelection;
+        public Attack tempAtkData;
+        public bool endingBattle = false;
+
+        public BattleState state = BattleState.Regular;
+
+        List<BattleAnimation> animation;
+        public int currentFrameS = 0;
+        public int currentFrameC = 0;
+        public int currentKeyFrame = 0;
+        public int elapsedTime = 0;
+        public bool incrementS = false;
+        public List<BattleAnimation> Animation
+        {
+            set
+            {
+                animation = value;
+                currentFrameS = 0;
+                currentFrameC = 0;
+                currentKeyFrame = 0;
+                elapsedTime = 0;
+                Console.WriteLine("new animation");
+            }
+            get { return animation; }
+        }
 
         public Battle(Game1 p)
         {
@@ -512,25 +594,30 @@ namespace Game1
                 //bool valid = false;
                 do
                 {
-                    int skill = rng.Next(1, 3);
+                    int skill = 1;
                     bool[] selection;
                     bool fixedSelection;
                     Attack atk;
-                    if (skill == 1)
+                    do
                     {
-                        atk = parent.SearchAttack(i.Skill1);
-                        action.command = BattleAction.Command.Attack1;
+                        skill = rng.Next(1, 3);
+                        if (skill == 1)
+                        {
+                            atk = parent.SearchAttack(i.Skill1);
+                            action.command = BattleAction.Command.Attack1;
+                        }
+                        else if (skill == 2)
+                        {
+                            atk = parent.SearchAttack(i.Skill2);
+                            action.command = BattleAction.Command.Attack2;
+                        }
+                        else
+                        {
+                            atk = parent.SearchAttack(i.Skill3);
+                            action.command = BattleAction.Command.Attack3;
+                        }
                     }
-                    else if (skill == 2)
-                    {
-                        atk = parent.SearchAttack(i.Skill2);
-                        action.command = BattleAction.Command.Attack2;
-                    }
-                    else
-                    {
-                        atk = parent.SearchAttack(i.Skill3);
-                        action.command = BattleAction.Command.Attack3;
-                    }
+                    while (atk.Name == "");
                     (selection,fixedSelection) = LoadSelection(atk, enemies);
                     List<bool[]> selections;
                     if (!fixedSelection)
@@ -626,17 +713,21 @@ namespace Game1
             {
                 case BattleAction.Command.Attack1:
                     atkData = parent.SearchAttack(fighter.Skill1);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Attack2:
                     atkData = parent.SearchAttack(fighter.Skill2);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Attack3:
                     atkData = parent.SearchAttack(fighter.Skill3);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Defend:
+                    ui.Message(fighter.Name + " defended");
                     fighter.Defending = true;
                     break;
                 case BattleAction.Command.Move:
@@ -661,7 +752,7 @@ namespace Game1
                 case BattleAction.Command.Flee:
                     if (canFlee)
                     {
-                        EndBattle(true);
+                        EndBattle(BattleResult.None);
                     }
                     break;
             }
@@ -674,6 +765,56 @@ namespace Game1
                     TurnCycle();
                 }
             }
+        }
+
+        public void AttackAnimation(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
+        {
+            state = BattleState.Animation;
+            tempFighter = attacker;
+            tempEnemyTeam = target;
+            tempSelection = selection;
+            tempAtkData = data;
+            Animation = new List<BattleAnimation>();
+            BattleAnimation frame = new BattleAnimation();
+            if (data.Category == "Physical")
+            {
+                frame.CharacterAnimation = CharAnimation.Physical;
+            }
+            else
+                frame.CharacterAnimation = CharAnimation.Ranged;
+            Animation.Add(frame);
+        }
+
+        public BattleResult CheckVictory()
+        {
+            BattleResult result = BattleResult.None;
+            bool allyDead = true;
+            bool enemyDead = true;
+            foreach (Fighter i in allies)
+            {
+                if (i != null && i.CurrentHP > 0)
+                {
+                    allyDead = false;
+                    break;
+                }
+            }
+            foreach (Fighter i in enemies)
+            {
+                if (i != null && i.CurrentHP > 0)
+                {
+                    enemyDead = false;
+                    break;
+                }
+            }
+            if (enemyDead)
+            {
+                result = BattleResult.PlayerWin;
+            }
+            if (allyDead)
+            {
+                result = BattleResult.EnemyWin;
+            }
+            return result;
         }
 
         public void Attack(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
@@ -767,13 +908,8 @@ namespace Game1
             return team;
         }
 
-        public void EndBattle(bool fled)
+        public void EndBattle(BattleResult result)
         {
-            parent.State = Game1.GameState.Playing;
-            if (!fled)
-            {
-
-            }
             for (int i = 0; i < 5; i++)
             {
                 Fighter fighter = allies[i];
@@ -783,10 +919,71 @@ namespace Game1
                     fighter.Character.CurrentMP = fighter.CurrentMP;
                 }
             }
+            if (result == BattleResult.PlayerWin)
+            {
+                int xpGain = 0;
+                foreach (Fighter i in enemies)
+                {
+                    if (i != null)
+                    {
+                        CharData data = parent.SearchChar(i.ID);
+                        xpGain = xpGain + (data.XP * i.Level / 10);
+                    }
+                }
+                foreach (Fighter i in allies)
+                {
+                    if (i != null && i.Character != null)
+                    {
+                        if (i.CurrentHP > 0)
+                            i.Character.XP = i.Character.XP + xpGain;
+                        else
+                            i.Character.XP = i.Character.XP + xpGain/4;
+                        if (i.Character.Level > i.Level)
+                        {
+                            int[] stats = parent.CalculateStats(i.Character);
+                            i.Character.CurrentHP = stats[0];
+                            i.Character.CurrentMP = stats[1];
+                        }
+                    }
+                }
+                ui.Message("You won the battle");
+                tempEnemyTeam = allies;
+            }
+            else if (result == BattleResult.EnemyWin)
+            {
+                ui.Message("You lost the battle");
+                tempEnemyTeam = enemies;
+            }
+            if (result == BattleResult.None)
+            {
+                ResumeEndBattle();
+            }
+            else
+            {
+                state = BattleState.Animation;
+                tempFighter = null;
+                tempSelection = new bool[5] { true, true, true, true, true };
+                tempAtkData = null;
+                endingBattle = true;
+                Animation = new List<BattleAnimation>();
+                for (int i = 0; i < 3; i++)
+                {
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Happy;
+                    Animation.Add(frame);
+                }
+            }
+        }
+
+        public void ResumeEndBattle()
+        {
+            ui.Message("");
             parent.play.Remove(parent.play.battle);
             parent.play.Remove(parent.play.battleUI);
             parent.play.Add(parent.play.mapWidget);
             parent.pause = false;
+            parent.State = Game1.GameState.Playing;
         }
     }
 }

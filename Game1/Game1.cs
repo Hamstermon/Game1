@@ -37,7 +37,7 @@ namespace Game1
             Battle,
             EndGame
         }
-        private GameState state = GameState.Playing;
+        GameState state = GameState.Playing;
         public GameState State
         {
             get { return state; }
@@ -89,7 +89,7 @@ namespace Game1
             graphics.ApplyChanges();
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            CreateNewGame(0);
+
         }
 
         /// <summary>
@@ -98,6 +98,27 @@ namespace Game1
         /// related content.  Calling base.Initialize will enumerate through any components
         /// and initialize them as well.
         /// </summary>
+        public enum Type
+        {
+            Normal,
+            Fire,
+            Water,
+            Electric,
+            Grass,
+            Ice,
+            Fighting,
+            Poison,
+            Ground,
+            Flying,
+            Psychic,
+            Bug,
+            Rock,
+            Ghost,
+            Dragon,
+            Dark,
+            Steel,
+            Light
+        }
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
@@ -105,6 +126,10 @@ namespace Game1
             var styleSystem = uiManager.UIStyle;
             var styles = styleSystem.LoadStyles("Content/style.xml", "UI/Metro", GraphicsDevice);
             styleSystem.StyleResolver.StyleRules.AddRange(styles);
+            int[,] matchup = new int[18, 18];
+            for (int i = 0; i< 18; i++)
+            {
+            }
 
             main = new MainMenu(styleSystem, this);
             menu = new OverWorldMenu(styleSystem, this);
@@ -136,6 +161,7 @@ namespace Game1
                 charAtk = serializer.Deserialize<List<CharAttack>>(reader);
             }
 
+            CreateNewGame(0);
             base.Initialize();
         }
 
@@ -204,7 +230,7 @@ namespace Game1
                     UpdateOverworld(gameTime);
                     break;
                 case GameState.Battle:
-                    UpdateBattle();
+                    UpdateBattle(gameTime);
                     break;
                 case GameState.EndGame:
                     UpdateEndGame();
@@ -373,7 +399,6 @@ namespace Game1
             stats[4] = (int)(10.0 + ((double)data.MAG * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
             stats[5] = (int)(10.0 + ((double)data.RES * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
             stats[6] = (int)(10.0 + ((double)data.SPD * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
-            Console.WriteLine("hp" + stats[0]);
             return stats;
         }
 
@@ -394,6 +419,8 @@ namespace Game1
                     }
                 }
             }
+            if (skills[0] == -1)
+                skills[0] = 0;
             return skills;
         }
 
@@ -423,7 +450,7 @@ namespace Game1
         {
             saveFileID = saveID;
             state = GameState.Playing;
-            Character c = CreateCharacter(0, 5, -1, -1, 0, 0, 0, true);
+            Character c = CreateCharacter(3, 5, -1, -1, 0, 0, 0, true);
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
             playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
@@ -640,59 +667,145 @@ namespace Game1
         }
 
         bool battleKeyDown = false;
-        public void UpdateBattle() 
+        public void UpdateBattle(GameTime gameTime) 
         {
-            currentFighter = battle.order[battle.turnNumber];
-            BattleAction action;
-            bool playerControlled = false;
-            if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
+            if (battle.state == BattleState.Regular)
             {
-                battleKeyDown = true;
-                play.battleUI.commands.MoveSelection(true);
-            }
-            else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
-            {
-                battleKeyDown = true;
-                play.battleUI.commands.MoveSelection(false);
-            }
-            else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
-            {
-                battleKeyDown = false;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
-            {
-                level.MoveCharacter(player, level.player, 2);
-            }
-            if (battle.GetTeam(currentFighter) == battle.allies)
-                playerControlled = true;
-            if (playerControlled)
-            {
-                if (play.battleUI.commands.Parent != play.battleUI)
+                currentFighter = battle.order[battle.turnNumber];
+                BattleAction action;
+                bool playerControlled = false;
+                if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
                 {
-                    play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
-                    play.battleUI.commands.ResetVisibility();
-                    Attack atk1 = SearchAttack(currentFighter.Skill1);
-                    Attack atk2 = SearchAttack(currentFighter.Skill2);
-                    Attack atk3 = SearchAttack(currentFighter.Skill3);
-                    play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
+                    battleKeyDown = true;
+                    play.battleUI.commands.MoveSelection(true);
                 }
-                //play.battleUI.commands.Visibility = Visibility.Visible;
-                if (battle.playerAction != null)
+                else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
                 {
-                    Console.WriteLine("player turn");
-                    battle.Turn(currentFighter, battle.playerAction);
-                    play.battleUI.Remove(play.battleUI.commands);
-                    //play.battleUI.commands.Visibility = Visibility.Hidden;
-                    battle.playerAction = null;
+                    battleKeyDown = true;
+                    play.battleUI.commands.MoveSelection(false);
+                }
+                else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
+                {
+                    battleKeyDown = false;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.Down))
+                {
+                    level.MoveCharacter(player, level.player, 2);
+                }
+                if (battle.GetTeam(currentFighter) == battle.allies)
+                    playerControlled = true;
+                if (playerControlled)
+                {
+                    if (play.battleUI.commands.Parent != play.battleUI)
+                    {
+                        play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
+                        play.battleUI.commands.ResetVisibility();
+                        Attack atk1 = SearchAttack(currentFighter.Skill1);
+                        Attack atk2 = SearchAttack(currentFighter.Skill2);
+                        Attack atk3 = SearchAttack(currentFighter.Skill3);
+                        play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
+                    }
+                    //play.battleUI.commands.Visibility = Visibility.Visible;
+                    if (battle.playerAction != null)
+                    {
+                        Console.WriteLine("player turn");
+                        battle.Turn(currentFighter, battle.playerAction);
+                        play.battleUI.Remove(play.battleUI.commands);
+                        //play.battleUI.commands.Visibility = Visibility.Hidden;
+                        battle.playerAction = null;
+                    }
+                }
+                else
+                {
+                    action = battle.Ai(currentFighter);
+                    Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
+                    battle.Turn(currentFighter, action);
+                    Console.WriteLine("EnemyTurn");
+                }
+                BattleResult battleOutcome = battle.CheckVictory();
+                if (battleOutcome != BattleResult.None)
+                {
+                    Console.WriteLine("dieded" + battleOutcome.ToString());
+                    battle.EndBattle(battleOutcome);
                 }
             }
-            else
+            else if (battle.state == BattleState.Animation)
             {
-                action = battle.Ai(currentFighter);
-                Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
-                battle.Turn(currentFighter, action);
-                Console.WriteLine("EnemyTurn");
+                battle.elapsedTime += gameTime.ElapsedGameTime.Milliseconds;
+                int xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].CharacterAnimation);
+                if (battle.tempFighter != null)
+                    battle.tempFighter.Char.Texture = GetCurrentFrame(battle.tempFighter.Char, xOffset);
+                xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].TargetAnimation);
+                for (int i = 0; i < 5; i++)
+                {
+                    if (battle.tempEnemyTeam[i] != null && battle.Animation[battle.currentKeyFrame].Selection[i] == true)
+                    {
+                        battle.tempEnemyTeam[i].Char.Texture = GetCurrentFrame(battle.tempEnemyTeam[i].Char, xOffset);
+                    }
+                }
+                if (battle.elapsedTime > 200 && battle.incrementS == false)
+                {
+                    battle.currentFrameS++;
+                    battle.incrementS = true;
+                }
+                if (battle.elapsedTime > 400)
+                {
+                    battle.elapsedTime = 0;
+                    battle.currentFrameS++;
+                    battle.currentFrameC++;
+                }
+                if (battle.currentFrameC >= 2)
+                {
+                    battle.elapsedTime = 0;
+                    battle.currentFrameS = 0;
+                    battle.currentFrameC = 0;
+                    battle.currentKeyFrame++;
+                    if (battle.currentKeyFrame >= battle.Animation.Count)
+                    {
+                        battle.state = BattleState.Regular;
+                        if (battle.endingBattle == false)
+                            battle.Attack(battle.tempFighter, battle.tempEnemyTeam, battle.tempSelection, battle.tempAtkData);
+                        else
+                            battle.ResumeEndBattle();
+                        battle.UpdateFighters();
+                        play.battleUI.Message("");
+                    }
+                }
             }
+        }
+
+        public int GetXOffsetOfAnimation(CharAnimation animation)
+        {
+            int xOffset = 0;
+            if (animation == CharAnimation.None)
+            {
+                xOffset = 12;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 4;
+            }
+            else if (animation == CharAnimation.Physical)
+            {
+                xOffset = 16 + battle.currentFrameC;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 22 + battle.currentFrameC;
+            }
+            else if (animation == CharAnimation.Ranged)
+            {
+                xOffset = 18 + battle.currentFrameC;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 24 + battle.currentFrameC;
+            }
+            else if (animation == CharAnimation.Hit)
+            {
+                xOffset = 20;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 26;
+            }
+            else if (animation == CharAnimation.Happy)
+            {
+                xOffset = 28 + battle.currentFrameC;
+            }
+            return xOffset;
         }
 
         public void UpdateEndGame()

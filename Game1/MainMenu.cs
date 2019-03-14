@@ -75,6 +75,7 @@ namespace Game1
         public BattleCommands commands;
         PartySlotB[] playerSlot;
         PartySlotB[] enemySlot;
+        TextField message;
         Game1 game;
 
         public BattleUI(IUIStyle s, Game1 parent) : base(s)
@@ -98,7 +99,8 @@ namespace Game1
                 
                 players.Add(temp, DockPanelConstraint.Left);
             }
-            commands = new BattleCommands(s, parent);;
+            commands = new BattleCommands(s, parent);
+            message = new TextField(s) { Anchor = AnchoredRect.CreateFixed(0, 6 * height / 9, width, height / 9), TextColor = Color.Black, Color = Color.LightGray};
             grid.Add(enemies);
             grid.Add(players);
             Add(grid);
@@ -131,6 +133,24 @@ namespace Game1
                 else
                 {
                     enemySlot[i].Visibility = Visibility.Hidden;
+                }
+            }
+        }
+        public void Message(string msg)
+        {
+            message.Text = msg;
+            if (msg == "")
+            {
+                if (message.Parent == this)
+                {
+                    Remove(message);
+                }
+            }
+            else
+            {
+                if (message.Parent != this)
+                {
+                    Add(message);
                 }
             }
         }
