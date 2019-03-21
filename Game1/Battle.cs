@@ -120,7 +120,7 @@ namespace Game1
                 defending = value;
                 if (value == true)
                 {
-                    currentMP = Convert.ToInt32(currentMP + mp * 0.2);
+                    CurrentMP = Convert.ToInt32(CurrentMP + mp * 0.2);
                 }
             }
             get { return defending; }
@@ -667,7 +667,6 @@ namespace Game1
                     }
                 }
             }
-            
             foreach (Fighter i in enemies)
             {
                 if (i != null)

@@ -48,7 +48,7 @@
     <Compile Include="Game1.cs" />
     <Compile Include="gameObjects.cs" />
     <Compile Include="Level.cs" />
-    <Compile Include="MainMenu.cs" />
+    <Compile Include="Menus.cs" />
     <Compile Include="MapWidget.cs" />
     <Compile Include="overworldCharacter.cs" />
     <Compile Include="PlayerSaveData.cs" />
@@ -72,6 +72,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\dialogs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\attacks.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

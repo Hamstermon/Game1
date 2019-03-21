@@ -63,6 +63,25 @@ namespace Game1
             }
             else
                 CreatePlayer(0, 0);
+            foreach (Squared.Tiled.Object npc in objects.Objects.Values)
+            {
+                if (npc.Type == "NPC")
+                {
+                    string name = npc.Properties["npc"];
+                    string spritesheet = npc.Properties["spritesheet"];
+                    int index = Convert.ToInt32(npc.Properties["id"]);
+                    int xOffset = 0;
+                    if (npc.Properties["direction"] == "0")
+                        xOffset = 8;
+                    else if (npc.Properties["direction"] == "1")
+                        xOffset = 4;
+                    else if (npc.Properties["direction"] == "2")
+                        xOffset = 0;
+                    else if (npc.Properties["direction"] == "3")
+                        xOffset = 12;
+                    npc.Texture = game.GetCurrentFrame(npc, xOffset);
+                }
+            }
             List<MapChar> enemySpawnList = game.FilterMapChar(mapID);
             enemySpawnPool = new List<MapChar>();
             foreach (MapChar x in enemySpawnList)
@@ -228,6 +247,32 @@ namespace Game1
             }
             character.Texture = game.GetCurrentFrame(characterData, character,xOffset);
             return successfulMove;
+        }
+
+        public void Interact()
+        {
+            int xOffset = 0;
+            int yOffset = 0;
+            if (game.player.Direction == 0)
+                yOffset -= 32;
+            else if (game.player.Direction == 1)
+                xOffset += 32;
+            else if (game.player.Direction == 2)
+                yOffset += 32;
+            else if (game.player.Direction == 3)
+                xOffset -= 32;
+            Rectangle box = new Rectangle() { X = player.X + xOffset + 8, Y = player.Y + yOffset + 8, Width = 16, Height = 16 };
+            foreach (Squared.Tiled.Object npc in objects.Objects.Values)
+            {
+                Rectangle enemyrec = new Rectangle(
+                npc.X,
+                npc.Y,
+                npc.Width,
+                npc.Height
+                );
+                if (box.Intersects(enemyrec))
+                    Console.WriteLine("INTERACTION");
+            }
         }
 
         private Vector2 FindSpawnLocation()

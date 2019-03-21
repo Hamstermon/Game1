@@ -34,6 +34,7 @@ namespace Game1
             MainMenu,
             Overworld,
             Playing,
+            Dialog,
             Battle,
             EndGame
         }
@@ -50,6 +51,7 @@ namespace Game1
                     case GameState.Overworld:
                     case GameState.Battle:
                     case GameState.EndGame:
+                    case GameState.Dialog:
                         pause = true;
                         break;
                     case GameState.Playing:
@@ -73,12 +75,16 @@ namespace Game1
         public bool pause = false;
         public Fighter currentFighter;
         Random rng = new Random();
-        
+
+        Dialog currentDialog;
+        public string newDialogName;
+                
         public List<Attack> attacks = new List<Attack>();
         public List<CharData> characters = new List<CharData>();
         public List<MapData> maps = new List<MapData>();
         public List<MapChar> mapChar = new List<MapChar>();
         public List<CharAttack> charAtk = new List<CharAttack>();
+        public List<Dialog> dialogs = new List<Dialog>();
         static JsonSerializer serializer = new JsonSerializer();
 
         public Game1()
@@ -89,7 +95,6 @@ namespace Game1
             graphics.ApplyChanges();
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-
         }
 
         /// <summary>
@@ -160,6 +165,11 @@ namespace Game1
             {
                 charAtk = serializer.Deserialize<List<CharAttack>>(reader);
             }
+            using (StreamReader sr = new StreamReader("Content/dialogs.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                dialogs = serializer.Deserialize<List<Dialog>>(reader);
+            }
 
             CreateNewGame(0);
             base.Initialize();
@@ -227,6 +237,7 @@ namespace Game1
                     break;
                 case GameState.Playing:
                 case GameState.Overworld:
+                case GameState.Dialog:
                     UpdateOverworld(gameTime);
                     break;
                 case GameState.Battle:
@@ -301,6 +312,19 @@ namespace Game1
                 }
             }
             return charatk;
+        }
+        public Dialog SearchDialog(string name)
+        {
+            Dialog dialog = new Dialog();
+            foreach (Dialog i in dialogs)
+            {
+                if (i.Name == name)
+                {
+                    dialog = i;
+                    break;
+                }
+            }
+            return dialog;
         }
 
         public int FindElement(string tableName, int id)
@@ -551,11 +575,9 @@ namespace Game1
 
         public Texture2D GetCurrentFrame(Squared.Tiled.Object character, int xOffset)
         {
-            string y;
-            character.Properties.TryGetValue("id", out y);
+            string y = character.Properties["id"];
             int yOffset = Convert.ToInt32(y);
-            string spriteSheetName;
-            character.Properties.TryGetValue("spritesheet", out spriteSheetName);
+            string spriteSheetName = character.Properties["spritesheet"];
             int frameWidth = 32;
             int frameHeight = 32;
             if (spriteSheetName == "characterSpritesheetLarge")
@@ -653,9 +675,35 @@ namespace Game1
                         State = GameState.Overworld;
                         Console.WriteLine("Show OverWorld");
                     }
+                    if (Keyboard.GetState().IsKeyDown(Keys.Z))
+                    {
+                        level.Interact();
+                    }
                 }
                 if (!moving)
                     player.CurrentFrame = 0;
+            }
+            else if (State == GameState.Dialog)
+            {
+                if (play.dialogUI.Parent != play)
+                    play.Add(play.dialogUI);
+                if (newDialogName != null)
+                {
+                    currentDialog = SearchDialog(newDialogName);
+                    if (currentDialog.Name != null)
+                    {
+                        play.dialogUI.box.Name = currentDialog.CharName;
+                        play.dialogUI.box.Text = currentDialog.Text;
+                        play.dialogUI.options.NewOptions(currentDialog);
+                    }
+                    else
+                    {
+                        if (play.dialogUI.Parent == play)
+                            play.Remove(play.dialogUI);
+                        State = GameState.Playing;
+                    }
+                    newDialogName = null;
+                }
             }
 
             //update level
@@ -835,6 +883,7 @@ namespace Game1
                     DrawEndGame();
                     break;
                 case GameState.Playing:
+                case GameState.Dialog:
                     break;
             }
 

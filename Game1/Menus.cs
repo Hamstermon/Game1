@@ -28,24 +28,21 @@ namespace Game1
         public TextField trans;
         public MapWidget battle;
         public BattleUI battleUI;
+        public DialogUI dialogUI;
 
         public Playing(IUIStyle s, Game1 parent, GraphicsDeviceManager man) : base(s)
         {
             mapWidget = new MapWidget(s);
             battle = new MapWidget(s);
             trans = new TextField(s)
-            {
-                //Alignment = Alignment.Center,
-                
+            {                
                 Anchor = AnchoredRect.CreateFixed(0, 0, 1080, 800),
                 Color = Color.Black,
                 TextColor = Color.White
             };
             battleUI = new BattleUI(s, parent);
+            dialogUI = new DialogUI(s, parent);
             Add(mapWidget);
-            //Add(trans);
-            //Add(battle);
-            //Add(battleUI);
         }
 
         public void TransitionVisible(bool visible)
@@ -54,16 +51,104 @@ namespace Game1
             {
                 Add(trans);
                 Remove(mapWidget);
-                //trans.Visibility = Visibility.Visible;
-                //mapWidget.Visibility = Visibility.Hidden;
             }
             else
             {
                 Add(mapWidget);
                 Remove(trans);
-                //trans.Visibility = Visibility.Hidden;
-                //mapWidget.Visibility = Visibility.Visible;
             }
+        }
+    }
+
+    public class DialogUI : DockPanel
+    {
+        int width = 1080;
+        int height = 800;
+        public DialogBox box;
+        public DialogOptions options;
+        public DialogUI(IUIStyle s, Game1 parent) : base(s)
+        {
+            Grid grid = new Grid(s) { Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
+            box = new DialogBox(s, parent, width, height / 4) { Anchor = AnchoredRect.CreateFixed(0, 3 * height / 4, width, height) };
+            options = new DialogOptions(s, parent);
+            grid.Add(box);
+            Add(grid);
+            Add(options,DockPanelConstraint.Left);
+        }
+    }
+
+    public class DialogOptions : DockPanel
+    {
+        List<Button> options = new List<Button>();
+        IUIStyle style;
+        Game1 game;
+        public DialogOptions(IUIStyle s, Game1 parent) : base(s)
+        {
+            style = s;
+            game = parent;
+        }
+        public void NewOptions(Dialog dialog)
+        {
+            foreach (Button i in options)
+            {
+                Remove(i);
+            }
+            if (dialog.OptionName1 != "")
+            {
+                Button button = new Button(style, dialog.OptionName1)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext1;
+                    }
+                };
+                Add(button);
+            }
+            if (dialog.OptionName2 != "")
+            {
+                Button button = new Button(style, dialog.OptionName2)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext2;
+                    }
+                };
+                Add(button);
+            }
+            if (dialog.OptionName3 != "")
+            {
+                Button button = new Button(style, dialog.OptionName3)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext3;
+                    }
+                };
+                Add(button);
+            }
+        }
+    }
+
+    public class DialogBox : Grid
+    {
+        TextField bg;
+        Label n;
+        Label txt;
+        public DialogBox(IUIStyle s, Game1 parent, int width, int height) : base(s)
+        {
+            bg = new TextField(s) { Color = Color.LightCyan, ReadOnly = true, Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
+            n = new Label(s, "name") { Anchor = AnchoredRect.CreateFixed(0, 0, width, Convert.ToInt32(height * 0.25)) };
+            txt = new Label(s, "text") { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.25), width, Convert.ToInt32(height * 0.75)) };
+        }
+        public string Name
+        {
+            set { n.Text = value; }
+            get { return n.Text; }
+        }
+        public string Text
+        {
+            set { txt.Text = value; }
+            get { return txt.Text; }
         }
     }
 

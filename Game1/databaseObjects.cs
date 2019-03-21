@@ -329,4 +329,71 @@ namespace Game1
             get { return level; }
         }
     }
+    public class Dialog
+    {
+        string name, chrName, text, oName1, oName2, oName3, oNext1, oNext2, oNext3, oEvent1, oEvent2, oEvent3;
+        public string Name
+        {
+            set { name = value; }
+            get { return name; }
+        }
+        public string CharName
+        {
+            set { chrName = value; }
+            get { return chrName; }
+        }
+        public string Text
+        {
+            set { text = value; }
+            get { return text; }
+        }
+
+        public string OptionName1
+        {
+            set { oName1 = value; }
+            get { return oName1; }
+        }
+        public string OptionNext1
+        {
+            set { oNext1 = value; }
+            get { return oNext1; }
+        }
+        public string OptionEvent1
+        {
+            set { oEvent1 = value; }
+            get { return oEvent1; }
+        }
+
+        public string OptionName2
+        {
+            set { oName2 = value; }
+            get { return oName2; }
+        }
+        public string OptionNext2
+        {
+            set { oNext2 = value; }
+            get { return oNext2; }
+        }
+        public string OptionEvent2
+        {
+            set { oEvent2 = value; }
+            get { return oEvent2; }
+        }
+
+        public string OptionName3
+        {
+            set { oName3 = value; }
+            get { return oName3; }
+        }
+        public string OptionNext3
+        {
+            set { oNext3 = value; }
+            get { return oNext3; }
+        }
+        public string OptionEvent3
+        {
+            set { oEvent3 = value; }
+            get { return oEvent3; }
+        }
+    }
 }
