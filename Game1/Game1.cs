@@ -38,7 +38,7 @@ namespace Game1
             Battle,
             EndGame
         }
-        GameState state = GameState.Playing;
+        GameState state = GameState.MainMenu;
         public GameState State
         {
             get { return state; }
@@ -77,7 +77,9 @@ namespace Game1
         Random rng = new Random();
 
         Dialog currentDialog;
+        public string npcName;
         public string newDialogName;
+        public string dialogEvent = "";
                 
         public List<Attack> attacks = new List<Attack>();
         public List<CharData> characters = new List<CharData>();
@@ -171,7 +173,7 @@ namespace Game1
                 dialogs = serializer.Deserialize<List<Dialog>>(reader);
             }
 
-            CreateNewGame(0);
+            //CreateNewGame(0);
             base.Initialize();
         }
 
@@ -222,7 +224,7 @@ namespace Game1
                 elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
                 if (elapsedTime > 10000)
                 {
-                    level.SpawnCycle();
+                    //level.SpawnCycle();
                     elapsedTime = 0;
                 }
             }
@@ -470,16 +472,6 @@ namespace Game1
             return c;
         }
 
-        public void CreateNewGame(int saveID)
-        {
-            saveFileID = saveID;
-            state = GameState.Playing;
-            Character c = CreateCharacter(3, 5, -1, -1, 0, 0, 0, true);
-            playerSaveData.CharacterList.Add(c);
-            int index = playerSaveData.CharacterList.IndexOf(c);
-            playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
-        }
-
         public void LoadBattle(List<OverworldEnemy> enemies)
         {
             state = GameState.Battle;
@@ -525,18 +517,38 @@ namespace Game1
             battle.TurnCycle();
         }
 
+        public void CreateNewGame(int saveID)
+        {
+            saveFileID = saveID;
+            state = GameState.Playing;
+            Character c = CreateCharacter(3, 5, -1, -1, 0, 0, 0, true);
+            playerSaveData.CharacterList.Add(c);
+            int index = playerSaveData.CharacterList.IndexOf(c);
+            playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
+        }
+
         public void LoadGame(int saveID)
         {
             saveFileID = saveID;
+            using (StreamReader sr = new StreamReader("save"+saveFileID+".txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                playerSaveData = serializer.Deserialize<PlayerSaveData>(reader);
+            }
+            state = GameState.Playing;
+        }
+
+        public void SaveGame()
+        {
+            using (StreamWriter sw = new StreamWriter("save"+saveFileID+".txt"))
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                serializer.Serialize(writer,playerSaveData);
+            }
         }
 
         public Texture2D GetCurrentFrame(OverworldChar charData, Squared.Tiled.Object character, int xOffset)
         {
-            //string y;
-            //character.Properties.TryGetValue("id", out y);
-            //int yOffset = Convert.ToInt32(y);
-            //string spriteSheetName;
-            //character.Properties.TryGetValue("spritesheet", out spriteSheetName);
             string spriteSheetName = charData.SpriteSheet;
             int yOffset = charData.SpriteIndex;
             int frameWidth = 32;
@@ -680,13 +692,51 @@ namespace Game1
                         level.Interact();
                     }
                 }
-                if (!moving)
+                if (moving)
+                {
+                    foreach (OverworldEnemy enemy in level.enemies)
+                    {
+                        bool fight = level.CheckCollisionBattle(enemy);
+                        if (fight)
+                        {
+                            pause = true;
+                            List<OverworldEnemy> fighters = level.GetEnemies(enemy.Character.X, enemy.Character.Y, 256, true);
+                            foreach (OverworldEnemy e in fighters)
+                            {
+                                GetCurrentFrame(e, e.Character, 29);
+                            }
+                            LoadBattle(fighters);
+                        }
+                    }
+                    level.SpawnCycle();
+                }
+                else
                     player.CurrentFrame = 0;
             }
             else if (State == GameState.Dialog)
             {
                 if (play.dialogUI.Parent != play)
                     play.Add(play.dialogUI);
+                if (dialogEvent != "")
+                {
+                    switch (npcName)
+                    {
+                        case "test":
+                            switch (dialogEvent)
+                            {
+                                case "heal":
+                                    foreach (Character i in playerSaveData.CharacterList)
+                                    {
+                                        int[] stats = CalculateStats(i);
+                                        i.CurrentHP = stats[0];
+                                        i.CurrentMP = stats[1];
+                                    }
+                                    break;
+                            }
+                            break;
+                    }
+                    dialogEvent = "";
+                }
                 if (newDialogName != null)
                 {
                     currentDialog = SearchDialog(newDialogName);

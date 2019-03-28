@@ -15,6 +15,7 @@ namespace Game1
     public class Level
     {
         public Map map;
+        List<Node> nodes;
         public MapData mapData;
         public Squared.Tiled.Object cameraFocus;
         Layer collision;
@@ -50,6 +51,7 @@ namespace Game1
             teleportLocations = mapName.ObjectGroups["teleportDestination"];
             objects = mapName.ObjectGroups["5objects"];
             mapData = game.SearchMap(mapID);
+            nodes = GetNodes();
             //if (player != null)
             //    objects.Objects.Remove(player.Name);
             foreach (OverworldEnemy enemy in enemies)
@@ -80,6 +82,11 @@ namespace Game1
                     else if (npc.Properties["direction"] == "3")
                         xOffset = 12;
                     npc.Texture = game.GetCurrentFrame(npc, xOffset);
+                    bool visible = IsNPCVisible(npc);
+                    if (!visible)
+                    {
+                        objects.Objects.Remove(npc.Name);
+                    }
                 }
             }
             List<MapChar> enemySpawnList = game.FilterMapChar(mapID);
@@ -92,7 +99,7 @@ namespace Game1
                 }
             }
             Console.WriteLine("Load Map char count:" +game.mapChar.Count);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 3; i++)
             {
                 MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
                 OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID], rng.Next(selected.MinLevel * 100, selected.MaxLevel * 100) / 100);
@@ -124,7 +131,6 @@ namespace Game1
 
         public void Update(GraphicsDeviceManager g, GameTime gameTime)
         {
-            bool battleEngaged = false;
             if (game.pause == false)
             {
                 cameraFocus = player;
@@ -134,7 +140,19 @@ namespace Game1
                 {
                     if (enemy.Despawn == false)
                     {
-                        if (enemy.AIType == "Default")
+                        string AIType = enemy.AIType;
+                        if (AIType == "Aggressive")
+                        {
+                            float distance = (float)Math.Sqrt(Math.Pow(player.X - enemy.Character.X,2)+Math.Pow(player.Y-enemy.Character.Y,2));
+                            if (distance < 96)
+                            {
+                                //Pathfind();
+                            }
+                            else
+                                AIType = "Default";
+
+                        }
+                        if (AIType == "Default")
                         {
                             bool successful = MoveCharacter(enemy, enemy.Character, enemy.Direction);
                             if (!successful)
@@ -151,23 +169,9 @@ namespace Game1
                             }
                         }
                         enemy.Animation(gameTime);
-                        bool fight = CheckCollisionBattle(enemy);
-                        if (fight)
-                        {
-                            battleEngaged = true;
-                            game.pause = true;
-                            List<OverworldEnemy> fighters = GetEnemies(enemy.Character.X, enemy.Character.Y, 256, true);
-                            foreach (OverworldEnemy e in fighters)
-                            {
-                                game.GetCurrentFrame(e, e.Character, 29);
-                            }
-                            game.LoadBattle(fighters);
-                        }
                     }
                 }
                 game.player.Animation(gameTime);
-                if (battleEngaged)
-                    SpawnCycle();
             }
         }
 
@@ -177,75 +181,166 @@ namespace Game1
 
         }
 
+        class Node
+        {
+            Vector2 pos;
+            public Vector2 Position
+            {
+                set { pos = value; }
+                get { return pos; }
+            }
+            bool[] adj;
+            public bool[] Adjacent
+            {
+                set { adj = value; }
+                get { return adj; }
+            }
+        }
+
+        private List<Node> GetNodes()
+        {
+            List<Node> nodes = new List<Node>();
+            for (int x = 0; x < map.Width; x++)
+            {
+                for (int y = 0; y < map.Height; y++)
+                {
+                    if (collision.GetTile(x, y) == 84)
+                    {
+                        Node temp = new Node();
+                        temp.Position = new Vector2(x, y);
+                        temp.Adjacent = new bool[4] { false, false, false, false };
+                        if (x - 1 >= 0 && collision.GetTile(x - 1, y) == 84)
+                        {
+                            temp.Adjacent[1] = true;
+                        }
+                        if (x + 1 <= map.Width && collision.GetTile(x + 1, y) == 84)
+                        {
+                            temp.Adjacent[3] = true;
+                        }
+                        if (y - 1 >= 0 && collision.GetTile(x, y - 1) == 84)
+                        {
+                            temp.Adjacent[2] = true;
+                        }
+                        if (y + 1 <= map.Height && collision.GetTile(x, y + 1) == 84)
+                        {
+                            temp.Adjacent[0] = true;
+                        }
+                    }
+                }
+            }
+            return nodes;
+        }
+
+        private Node FindNode(Vector2 pos)
+        {
+            Node node = new Node();
+            foreach (Node i in nodes)
+            {
+                if (i.Position == pos)
+                {
+                    node = i;
+                    break;
+                }
+            }
+            return node;
+        }
+
+        private Node NodeFromObject(Squared.Tiled.Object character)
+        {
+            double x = character.X / map.TileWidth;
+            double y = character.Y / map.TileHeight;
+            Vector2 pos = new Vector2((float)Math.Round(x, 0), (float)Math.Round(y, 0) );
+            Node node = FindNode(pos);
+            return node;
+        }
+
+        private void SortNodes(Vector2 start)
+        {
+            List<Node> nodesSort = nodes.OrderBy(x => x.Position - start).ToList();
+        }
+
+        public void Pathfind(Vector2 start, Vector2 end)
+        {
+            SortNodes(start);
+        }
+
         public bool MoveCharacter(OverworldChar characterData, Squared.Tiled.Object character, int direction)
         {
-            bool successfulMove = false;
-            int xOffset = 0;
+            bool successfulMove = false; 
+            int xOffset = 0; //used for animation to use
             if (direction == 0) //up
             {
                 xOffset = 8;
+                character.Y -= characterData.WalkSpeed;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
-                    character.Y -= 1;
                     characterData.Direction = direction;
                     if (CheckBounds(character))
                     {
                         character.Y += 1;
-                        break;
                     }
                     else
+                    {
                         successfulMove = true;
+                        break;
+                    }
                 }
             }
             else if (direction == 1) //right
             {
                 xOffset = 4;
+                character.X += characterData.WalkSpeed;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
-                    character.X += 1;
                     characterData.Direction = direction;
                     if (CheckBounds(character))
                     {
                         character.X -= 1;
-                        break;
                     }
                     else
+                    {
                         successfulMove = true;
+                        break;
+                    }
                 }
             }
             else if (direction == 2) //down
             {
                 xOffset = 0;
+                character.Y += characterData.WalkSpeed;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
-                    character.Y += 1;
                     characterData.Direction = direction;
                     if (CheckBounds(character))
                     {
                         character.Y -= 1;
-                        break;
                     }
                     else
+                    {
                         successfulMove = true;
+                        break;
+                    }
                 }
             }
             else if (direction == 3) //left
             {
                 xOffset = 12;
+                character.X -= characterData.WalkSpeed;
                 for (int i = 0; i < characterData.WalkSpeed; i++)
                 {
-                    character.X -= 1;
                     characterData.Direction = direction;
                     if (CheckBounds(character))
                     {
                         character.X += 1;
-                        break;
                     }
                     else
+                    {
                         successfulMove = true;
+                        break;
+                    }
                 }
             }
-            character.Texture = game.GetCurrentFrame(characterData, character,xOffset);
+            game.GetCurrentFrame(characterData, character,xOffset);
             return successfulMove;
         }
 
@@ -261,6 +356,7 @@ namespace Game1
                 yOffset += 32;
             else if (game.player.Direction == 3)
                 xOffset -= 32;
+            //the hitbox for interacting with an npc is displaced depending on the direction the player is facing
             Rectangle box = new Rectangle() { X = player.X + xOffset + 8, Y = player.Y + yOffset + 8, Width = 16, Height = 16 };
             foreach (Squared.Tiled.Object npc in objects.Objects.Values)
             {
@@ -270,34 +366,71 @@ namespace Game1
                 npc.Width,
                 npc.Height
                 );
-                if (box.Intersects(enemyrec))
-                    Console.WriteLine("INTERACTION");
+                if (box.Intersects(enemyrec) && npc.Type == "NPC") //if the object is an npc and it intersects the hitbox
+                {
+                    game.State = Game1.GameState.Dialog;
+                    game.npcName = npc.Properties["npc"];
+                    game.dialogEvent = "";
+                    switch (npc.Properties["npc"]) //logic for each of the npcs
+                    {
+                        case "test":
+                            game.newDialogName = "test1";
+                            break;
+                        default: //if the npc has no logic return to the playing state
+                            game.State = Game1.GameState.Playing;
+                            break;
+                    }
+                }
             }
+        }
+
+        public bool IsNPCVisible(Squared.Tiled.Object npc)
+        {
+            //checks if an npc should be spawned when the map is loaded
+            bool visible = true;
+            switch (npc.Properties["npc"])
+            {
+                case "test":
+                    break;
+            }
+            return visible;
         }
 
         private Vector2 FindSpawnLocation()
         {
             Vector2 position;
-            Vector2[] spawns = new Vector2[map.Width * map.Height];
+            List<Vector2> spawns = new List<Vector2>();
             Vector2 playerPos = new Vector2(player.X-player.Width/2,player.Y-player.Height/2);
-            int spawnCount = 0;
             for (int x = 0; x < map.Width; x++)
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    if (collision.GetTile(x, y) == 84)
+                    if (collision.GetTile(x, y) == 84) //Checking if the tile is a tile that can be spawned on
                     {
                         Vector2 tilePos = new Vector2(x * tilepixel, y * tilepixel);
-                        double magnitude = Math.Sqrt(Math.Pow((playerPos.X-tilePos.X),2) + Math.Pow((playerPos.Y - tilePos.Y), 2));
-                        if (magnitude >= 128.0)
+                        double magnitude = Math.Sqrt(Math.Pow((playerPos.X - tilePos.X), 2) + Math.Pow((playerPos.Y - tilePos.Y), 2));
+                        if (magnitude >= 128.0) //if the tile is not too close to the player
                         {
-                            spawns[spawnCount] = tilePos;
-                            spawnCount++;
+                            bool valid = true;
+                            foreach (Squared.Tiled.Object obj in objects.Objects.Values) //Checks if any npcs/other enemies interect this tile
+                            {
+                                Rectangle objRect = new Rectangle(obj.X - obj.Width / 2, obj.Y - obj.Height / 2, obj.Width, obj.Height);
+                                Rectangle tilRect = new Rectangle(x * tilepixel, y * tilepixel, tilepixel, tilepixel);
+                                if (objRect.Intersects(tilRect))
+                                {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            if (valid) //if no npc intersect the tile it can be spawned on
+                            {
+                                spawns.Add(tilePos);
+                            }
                         }
                     }
                 }
             }
-            position = spawns[rng.Next(0,spawnCount)];
+            position = spawns[rng.Next(0,spawns.Count)]; //picks a random spawnable tile
             return position;
         }
 
@@ -339,14 +472,14 @@ namespace Game1
             foreach (OverworldEnemy i in enemies)
             {
                 Vector2 charPos = new Vector2(i.Character.X, i.Character.Y);
-                if (i.Despawn == true)
+                if (i.Despawn == true) //if the enemy is set to despawn regardless of distance
                 {
                     toRemove.Add(i);
                 }
                 else
                 {
                     double magnitude = Math.Sqrt(Math.Pow((playerPos.X - charPos.X), 2) + Math.Pow((playerPos.Y - charPos.Y), 2));
-                    if (magnitude >= 512.0)
+                    if (magnitude >= 512.0) //if the enemy is too far from the player it will have a chance to despawn
                     {
                         if (rng.Next(0, 100) < 50)
                         {
@@ -355,12 +488,12 @@ namespace Game1
                     }
                 }
             }
-            foreach (OverworldEnemy i in toRemove)
+            foreach (OverworldEnemy i in toRemove) //despawns the enemies
             {
                 objects.Objects.Remove(i.Character.Name);
                 enemies.Remove(i);
             }
-            if (enemies.Count < mapData.SpawnCap)
+            if (enemies.Count < mapData.SpawnCap) //checking if a new enemy can be spawned
             {
                 MapChar selected = enemySpawnPool[rng.Next(0, enemySpawnPool.Count)];
                 OverworldEnemy newEnemy = CreateEnemy(game.characters[selected.CharID], rng.Next(selected.MinLevel*100,selected.MaxLevel*100)/100);
@@ -368,7 +501,7 @@ namespace Game1
             }
         }
 
-        private bool CheckCollisionBattle(OverworldEnemy enemy)
+        public bool CheckCollisionBattle(OverworldEnemy enemy)
         {
             bool check = false;
             Rectangle playrec = new Rectangle(
@@ -390,7 +523,7 @@ namespace Game1
             return check;
         }
 
-        private List<OverworldEnemy> GetEnemies(int x, int y, int range, bool despawn)
+        public List<OverworldEnemy> GetEnemies(int x, int y, int range, bool despawn)
         {
             List<OverworldEnemy> fighters = new List<OverworldEnemy>();
             foreach (OverworldEnemy e in enemies)
@@ -416,6 +549,7 @@ namespace Game1
                 character.Height
                 );
 
+            //collisions with the map
             for (int x = 0; x < map.Width; x++)
             {
                 for (int y = 0; y < map.Height; y++)
@@ -434,6 +568,7 @@ namespace Game1
                     }
                 }
             }
+            //collisions with objects
             foreach (KeyValuePair<string, Squared.Tiled.Object> entity in objects.Objects.ToArray())
             {
                 Rectangle objrec = new Rectangle(entity.Value.X-entity.Value.Width/2, entity.Value.Y-entity.Value.Height/2, entity.Value.Width, entity.Value.Height);
@@ -447,6 +582,7 @@ namespace Game1
             }
             if (character == player)
             {
+                //collisions with teleporters
                 foreach (KeyValuePair<string, Squared.Tiled.Object> entity in teleports.Objects.ToArray())
                 {
                     Rectangle objrec = new Rectangle(entity.Value.X, entity.Value.Y, entity.Value.Width, entity.Value.Height);

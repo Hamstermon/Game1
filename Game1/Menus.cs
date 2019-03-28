@@ -8,7 +8,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.IO;
 using Squared.Tiled;
-using System.Collections.Generic;
 using Steropes.UI;
 using Steropes.UI.Components;
 using Steropes.UI.Input;
@@ -89,8 +88,14 @@ namespace Game1
         }
         public void NewOptions(Dialog dialog)
         {
+            List<Button> toRemove = new List<Button>();
             foreach (Button i in options)
             {
+                toRemove.Add(i);
+            }
+            foreach(Button i in toRemove)
+            {
+                options.Remove(i);
                 Remove(i);
             }
             if (dialog.OptionName1 != "")
@@ -100,8 +105,10 @@ namespace Game1
                     OnActionPerformed = (se, a) =>
                     {
                         game.newDialogName = dialog.OptionNext1;
+                        game.dialogEvent = dialog.OptionEvent1;
                     }
                 };
+                options.Add(button);
                 Add(button);
             }
             if (dialog.OptionName2 != "")
@@ -111,8 +118,10 @@ namespace Game1
                     OnActionPerformed = (se, a) =>
                     {
                         game.newDialogName = dialog.OptionNext2;
+                        game.dialogEvent = dialog.OptionEvent2;
                     }
                 };
+                options.Add(button);
                 Add(button);
             }
             if (dialog.OptionName3 != "")
@@ -122,8 +131,10 @@ namespace Game1
                     OnActionPerformed = (se, a) =>
                     {
                         game.newDialogName = dialog.OptionNext3;
+                        game.dialogEvent = dialog.OptionEvent3;
                     }
                 };
+                options.Add(button);
                 Add(button);
             }
         }
@@ -137,8 +148,11 @@ namespace Game1
         public DialogBox(IUIStyle s, Game1 parent, int width, int height) : base(s)
         {
             bg = new TextField(s) { Color = Color.LightCyan, ReadOnly = true, Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
-            n = new Label(s, "name") { Anchor = AnchoredRect.CreateFixed(0, 0, width, Convert.ToInt32(height * 0.25)) };
-            txt = new Label(s, "text") { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.25), width, Convert.ToInt32(height * 0.75)) };
+            n = new Label(s, "name") { Anchor = AnchoredRect.CreateFixed(0, 0, width, Convert.ToInt32(height * 0.25)), TextColor = Color.Black };
+            txt = new Label(s, "text") { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.25), width, Convert.ToInt32(height * 0.75)), TextColor = Color.Black };
+            Add(bg);
+            Add(n);
+            Add(txt);
         }
         public string Name
         {
@@ -658,6 +672,13 @@ namespace Game1
                     menu.MenuState = OverWorldMenu.OverworldMenuState.Options;
                 }
             };
+            var sav = new Button(s, "Save")
+            {
+                OnActionPerformed = (se, a) =>
+                {
+                    parent.SaveGame();
+                }
+            };
             var exit = new Button(s, "Exit")
             {
                 //Anchor = AnchoredRect.CreateBottomRightAnchored(),
@@ -670,6 +691,7 @@ namespace Game1
             this.Add(party);
             this.Add(inv);
             this.Add(opt);
+            this.Add(sav);
             this.Add(exit);
         }
     }
@@ -1271,7 +1293,7 @@ namespace Game1
         int height = 800;
         UITexture uiTexture;
 
-        public SaveFile(IUIStyle s, Game1 parent, MainMenu menu) : base(s)
+        public SaveFile(IUIStyle s, Game1 parent, MainMenu menu, int saveFileID) : base(s)
         {
             var back = new Button(s, "Back")
             {
@@ -1286,16 +1308,16 @@ namespace Game1
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    //parent.LoadGame(1);
+                    parent.LoadGame(saveFileID);
                 },
                 //Anchor = AnchoredRect.CreateFixed(0, 0, 200, 80),
-                Color = Color.OrangeRed,
+                Color = Color.Green,
             };
             var new1 = new Button(s, "New Game")
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    parent.CreateNewGame(1);
+                    parent.CreateNewGame(saveFileID);
                 },
                 //Anchor = AnchoredRect.CreateFixed(0, 0, 200, 80),
                 Color = Color.OrangeRed,
@@ -1357,7 +1379,7 @@ namespace Game1
         public MainMenu(IUIStyle s, Game1 parent) : base(s)
         {
             title = new TitleScreen(s, parent, this);
-            saveFile = new SaveFile(s, parent, this);
+            saveFile = new SaveFile(s, parent, this,1);
             options = new Options(s, parent, this);
             this.Add(title);
         }
