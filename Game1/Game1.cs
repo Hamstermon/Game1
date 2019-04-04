@@ -187,10 +187,7 @@ namespace Game1
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             level = new Level();
-            mapID = 0;
-            play.mapWidget.Init("testMap1.tmx", this, graphics);
             
-            level.Init(this, 50, play.mapWidget.CurrentMap);
             pixel = new Texture2D(GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             pixel.SetData(new[] { Color.White });
 
@@ -395,6 +392,19 @@ namespace Game1
             return realID;
         }
 
+        public int FindEvent(string name)
+        {
+            int temp = -1;
+            foreach (Event e in playerSaveData.Events)
+            {
+                if (e.Name == name)
+                {
+                    temp = e.Value;
+                }
+            }
+            return temp;
+        }
+
         public void Wait(int milliseconds)
         {
             Stopwatch timer = new Stopwatch();
@@ -472,49 +482,65 @@ namespace Game1
             return c;
         }
 
-        public void LoadBattle(List<OverworldEnemy> enemies)
+        public void LoadBattle(List<OverworldEnemy> enemies, int[] positions, string dialog)
         {
-            state = GameState.Battle;
-            battle = new Battle(this);
-            string battlefieldName = SearchMap(mapID).BattleFileName;
-            play.battle.Init(battlefieldName+".tmx", this, graphics);
-            play.Add(play.battle);
-            play.Add(play.battleUI);
-            play.Remove(play.mapWidget);
-            //play.battle.Visibility = Visibility.Visible;
-            //play.battleUI.Visibility = Visibility.Visible;
-            //play.mapWidget.Visibility = Visibility.Hidden;
-            for (int i = 0; i < 5; i++)
+            if (play.mapWidget.Parent == play)
             {
-                if (playerSaveData.Party[i] != -1)
+                state = GameState.Battle;
+                battle = new Battle(this,dialog);
+                string battlefieldName = SearchMap(mapID).BattleFileName;
+                play.battle.Init(battlefieldName + ".tmx", this, graphics);
+                play.Add(play.battle);
+                play.Add(play.battleUI);
+                play.Remove(play.mapWidget);
+                //play.battle.Visibility = Visibility.Visible;
+                //play.battleUI.Visibility = Visibility.Visible;
+                //play.mapWidget.Visibility = Visibility.Hidden;
+                for (int i = 0; i < 5; i++)
                 {
-                    Character c = playerSaveData.CharacterList[playerSaveData.Party[i]];
-                    battle.AddFighter(c, battle.allies, i);
-                    Console.WriteLine("add ally");
-                }
-            }
-            bool[] occupied = new bool[5] { false, false, false, false, false };
-            for (int i = 0; i < 5; i++)
-            {
-               
-                if (i < enemies.Count)
-                {
-                    OverworldEnemy e = enemies[i];
-                    int slot = 0;
-                    do
+                    if (playerSaveData.Party[i] != -1)
                     {
-                        slot = rng.Next(0, 4);
+                        Character c = playerSaveData.CharacterList[playerSaveData.Party[i]];
+                        battle.AddFighter(c, battle.allies, i);
+                        Console.WriteLine("add ally");
                     }
-                    while (occupied[slot] == true);
-                    occupied[slot] = true;
-                    battle.AddFighter(e, battle.enemies, slot);
-                    Console.WriteLine("add enemy");
                 }
+                bool[] occupied = new bool[5] { false, false, false, false, false };
+                if (positions == null)
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+
+                        if (i < enemies.Count)
+                        {
+                            OverworldEnemy e = enemies[i];
+                            int slot = 0;
+                            do
+                            {
+                                slot = rng.Next(0, 4);
+                            }
+                            while (occupied[slot] == true);
+                            occupied[slot] = true;
+                            battle.AddFighter(e, battle.enemies, slot);
+                            Console.WriteLine("add enemy");
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (positions[i] != -1)
+                        {
+                            battle.AddFighter(enemies[positions[i]], battle.enemies, i);
+                        }
+                    }
+                }
+                Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
+                play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
+                play.battleUI.RefreshFighters();
+                battle.TurnCycle();
             }
-            Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
-            play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
-            play.battleUI.RefreshFighters();
-            battle.TurnCycle();
         }
 
         public void CreateNewGame(int saveID)
@@ -525,6 +551,11 @@ namespace Game1
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
             playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
+
+            mapID = 0;
+            MapData mapData = SearchMap(mapID);
+            play.mapWidget.Init(mapData.MapFileName+".tmx", this, graphics);
+            level.Init(this, 50, play.mapWidget.CurrentMap,-1,-1);
         }
 
         public void LoadGame(int saveID)
@@ -535,16 +566,24 @@ namespace Game1
             {
                 playerSaveData = serializer.Deserialize<PlayerSaveData>(reader);
             }
+            
+            mapID = playerSaveData.MapID;
+            MapData mapData = SearchMap(mapID);
+            play.mapWidget.Init(mapData.MapFileName + ".tmx", this, graphics);
+            level.Init(this, 50, play.mapWidget.CurrentMap, playerSaveData.Position[0], playerSaveData.Position[1]);
             state = GameState.Playing;
         }
 
         public void SaveGame()
         {
+            playerSaveData.Position = new int[2] { level.player.X, level.player.Y };
+            playerSaveData.MapID = mapID;
             using (StreamWriter sw = new StreamWriter("save"+saveFileID+".txt"))
             using (JsonWriter writer = new JsonTextWriter(sw))
             {
                 serializer.Serialize(writer,playerSaveData);
             }
+            Console.WriteLine("saved");
         }
 
         public Texture2D GetCurrentFrame(OverworldChar charData, Squared.Tiled.Object character, int xOffset)
@@ -657,6 +696,7 @@ namespace Game1
                 {
                     Wait(1000);
                     play.TransitionVisible(false);
+                    pause = false;
                 }
                 uiManager.Root.Content = play;
                 bool moving = false;
@@ -705,7 +745,7 @@ namespace Game1
                             {
                                 GetCurrentFrame(e, e.Character, 29);
                             }
-                            LoadBattle(fighters);
+                            LoadBattle(fighters,null,null);
                         }
                     }
                     level.SpawnCycle();
@@ -731,6 +771,32 @@ namespace Game1
                                         i.CurrentHP = stats[0];
                                         i.CurrentMP = stats[1];
                                     }
+                                    break;
+                            }
+                            break;
+                        case "bubbles":
+                            switch (dialogEvent)
+                            {
+                                case "befriend":
+                                    Character c = CreateCharacter(2, 5, -1, -1, 0, 0, 0, true);
+                                    playerSaveData.CharacterList.Add(c);
+                                    int index = playerSaveData.CharacterList.IndexOf(c);
+                                    int slot = -1;
+                                    int count = 0;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (playerSaveData.Party[i] == -1 && slot == -1)
+                                            slot = i;
+                                        if (playerSaveData.Party[i] != -1)
+                                            count++;
+                                    }
+                                    if (count < 3)
+                                        playerSaveData.Party[slot] = index;
+                                    Event e = new Event();
+                                    e.Name = "bubblesBefriend";
+                                    e.Value = 0;
+                                    playerSaveData.Events.Add(e);
+                                    level.objects.Objects.Remove("npc2");
                                     break;
                             }
                             break;

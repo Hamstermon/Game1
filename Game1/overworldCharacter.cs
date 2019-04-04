@@ -128,6 +128,12 @@ namespace Game1
             set { despawn = value; }
             get { return despawn; }
         }
+        int[] bonusStats = new int[7] { 0, 0, 0, 0, 0, 0, 0 };
+        public int[] BonusStats
+        {
+            set { bonusStats = value; }
+            get { return bonusStats; }
+        }
     }
 
     public class OverworldPlayer : OverworldChar

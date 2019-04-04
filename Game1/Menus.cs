@@ -658,20 +658,20 @@ namespace Game1
                     menu.MenuState = OverWorldMenu.OverworldMenuState.Party;
                 }
             };
-            var inv = new Button(s, "Inventory")
-            {
-                OnActionPerformed = (se, a) =>
-                {
-                    menu.MenuState = OverWorldMenu.OverworldMenuState.Inventory;
-                }
-            };
-            var opt = new Button(s, "Options")
-            {
-                OnActionPerformed = (se, a) =>
-                {
-                    menu.MenuState = OverWorldMenu.OverworldMenuState.Options;
-                }
-            };
+            //var inv = new Button(s, "Inventory")
+            //{
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = OverWorldMenu.OverworldMenuState.Inventory;
+            //    }
+            //};
+            //var opt = new Button(s, "Options")
+            //{
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = OverWorldMenu.OverworldMenuState.Options;
+            //    }
+            //};
             var sav = new Button(s, "Save")
             {
                 OnActionPerformed = (se, a) =>
@@ -689,8 +689,8 @@ namespace Game1
                 }
             };
             this.Add(party);
-            this.Add(inv);
-            this.Add(opt);
+            //this.Add(inv);
+            //this.Add(opt);
             this.Add(sav);
             this.Add(exit);
         }
@@ -703,15 +703,17 @@ namespace Game1
         UITexture uiTexture;
         string location;
         int pos;
+        public Button button;
+        public Character character;
         public PartySlot(IUIStyle s, Game1 parent, OverWorldMenu menu, Party party) : base(s)
         {
             n = new Label(s,"aaaaa");
             l = new Label(s,"lv.0");
-            var button = new Button(s, "Select")
+            button = new Button(s, "Select")
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    party.CharSelect(location,pos);
+                    party.CharSelect(this,character);
                 }
             };
             Add(n);
@@ -1049,6 +1051,7 @@ namespace Game1
         PartySlot[] slotsP;
         PartySlot[] slotsR;
         PartyTasks tasks;
+        PartySlot selectedMember;
         Info info;
         public enum EditMode
         {
@@ -1061,6 +1064,7 @@ namespace Game1
             set
             {
                 mode = value;
+                SelectedMember = null;
                 tasks.Task(mode);
             }
             get { return mode; }
@@ -1124,42 +1128,127 @@ namespace Game1
         public void UpdateParty()
         {
             PlayerSaveData psd = parent.playerSaveData;
+            List<Character> temp = new List<Character>();
+            foreach (Character c in psd.CharacterList)
+            {
+                temp.Add(c);
+            }
             for (int i = 0; i < 5; i++)
             {
-                int id = psd.Party[i];
                 PartySlot p = slotsP[i];
-                if (id != -1)
+                if (psd.Party[i] == -1)
                 {
-                    Character c = psd.CharacterList[id];
-                    CharData info = parent.SearchChar(c.CharacterID);
-                    p.Name = info.Name;
-                    p.Level = Convert.ToString(c.Level);
+                    p.character = null;
+                    p.Name = "";
+                    p.Level = "";
                 }
                 else
                 {
+                    p.character = psd.CharacterList[psd.Party[i]];
+                    temp.Remove(psd.CharacterList[psd.Party[i]]);
+                    CharData info = parent.SearchChar(p.character.CharacterID);
+                    p.Name = info.Name;
+                    p.Level = Convert.ToString(p.character.Level);
+                }
+            }
+            for (int i = 0; i < slotsR.Length; i++)
+            {
+                PartySlot p = slotsR[i];
+                if (i < temp.Count)
+                {
+                    p.character = temp[i];
+                    CharData info = parent.SearchChar(p.character.CharacterID);
+                    p.Name = info.Name;
+                    p.Level = Convert.ToString(p.character.Level);
+                }
+                else
+                {
+                    p.character = null;
                     p.Name = "";
                     p.Level = "";
                 }
             }
         }
 
-        public void CharSelect(string location, int pos)
+        public void CharSelect(PartySlot slot, Character c)
         {
+            PlayerSaveData psd = parent.playerSaveData;
             switch (mode)
             {
                 case EditMode.Arrange:
-                    break;
-                case EditMode.Stats:
-                    if (location == "P")
+                    if (SelectedMember == null)
                     {
-                        PlayerSaveData psd = parent.playerSaveData;
-                        Character c = psd.CharacterList[psd.Party[pos]];
-                        if (c != null)
-                            info.LoadInfo(c);
+                        SelectedMember = slot;
+                    }
+                    else
+                    {
+                        int indexM1 = -1;
+                        if (SelectedMember.character != null)
+                            indexM1 = psd.CharacterList.IndexOf(SelectedMember.character);
+                        string locM1 = SelectedMember.Location;
+                        int posM1 = SelectedMember.Position;
+                        int indexM2 = -1;
+                        if (slot.character != null)
+                            indexM2 = psd.CharacterList.IndexOf(slot.character);
+                        string locM2 = slot.Location;
+                        int posM2 = slot.Position;
+                        int count = 0;
+                        for (int i = 0; i < 5; i++)
+                        {
+                            if (psd.Party[i] != -1)
+                                count++;
+                        }
+                        int partyIncrease = 0;
+                        if (locM1 == "P" && locM2 == "R")
+                        {
+                            if (indexM1 == -1)
+                                partyIncrease++;
+                            if (indexM2 == -1)
+                                partyIncrease--;
+                        }
+                        else if (locM1 == "R" && locM2 == "P")
+                        {
+                            if (indexM1 == -1)
+                                partyIncrease--;
+                            if (indexM2 == -1)
+                                partyIncrease++;
+                        }
+                        if (count + partyIncrease <= 3 && count + partyIncrease >= 1)
+                        {
+                            if (locM1 == "P")
+                                psd.Party[posM1] = indexM2;
+                            if (locM2 == "P")
+                                psd.Party[posM2] = indexM1;
+                        }
+                        SelectedMember = null;
                     }
                     break;
+                case EditMode.Stats:
+                    if (c != null)
+                        info.LoadInfo(c);
+                    break;
             }
+
+            UpdateParty();
         }
+
+        public PartySlot SelectedMember
+        {
+            set
+            {
+                if (selectedMember != null)
+                {
+                    selectedMember.button.Color = Color.White;
+                }
+                selectedMember = value;
+                if (selectedMember != null)
+                {
+                    selectedMember.button.Color = Color.Green;
+                }
+            }
+            get { return selectedMember; }
+        }
+
     }
 
 
@@ -1197,14 +1286,14 @@ namespace Game1
         OverworldMenuState menuState = OverworldMenuState.Main;
         MainOW main;
         Party party;
-        Inventory inventory;
-        Options options;
+        //Inventory inventory;
+        //Options options;
         public OverWorldMenu(IUIStyle s, Game1 parent) : base(s)
         {
             main = new MainOW(s, parent, this);
             party = new Party(s, parent, this);
-            inventory = new Inventory(s, parent, this);
-            options = new Options(s, parent, this);
+            //inventory = new Inventory(s, parent, this);
+            //options = new Options(s, parent, this);
             this.Add(main);
         }
 
@@ -1221,10 +1310,10 @@ namespace Game1
                         this.Remove(party);
                         break;
                     case OverworldMenuState.Inventory:
-                        this.Remove(inventory);
+                        //this.Remove(inventory);
                         break;
                     case OverworldMenuState.Options:
-                        this.Remove(options);
+                        //this.Remove(options);
                         break;
                 }
                 menuState = value;
@@ -1238,10 +1327,10 @@ namespace Game1
                         party.UpdateParty();
                         break;
                     case OverworldMenuState.Inventory:
-                        this.Add(inventory);
+                        //this.Add(inventory);
                         break;
                     case OverworldMenuState.Options:
-                        this.Add(options);
+                        //this.Add(options);
                         break;
                 }
             }
@@ -1272,18 +1361,18 @@ namespace Game1
                     menu.MenuState = MainMenu.MainMenuState.SaveFile;
                 }
             };
-            var options = new Button(s, "Options")
-            {
-                Anchor = AnchoredRect.CreateFixed(10, 220, 120, 80),
-                Color = Color.Aqua,
-                OnActionPerformed = (se, a) =>
-                {
-                    menu.MenuState = MainMenu.MainMenuState.Options;
-                }
-            };
+            //var options = new Button(s, "Options")
+            //{
+            //    Anchor = AnchoredRect.CreateFixed(10, 220, 120, 80),
+            //    Color = Color.Aqua,
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = MainMenu.MainMenuState.Options;
+            //    }
+            //};
             this.Add(bg);
             this.Add(play);
-            this.Add(options);
+            //this.Add(options);
         }
     }
 
@@ -1298,7 +1387,6 @@ namespace Game1
             var back = new Button(s, "Back")
             {
                 //Anchor = AnchoredRect.CreateFixed(10, height-100, 120, 80),
-                Color = Color.OrangeRed,
                 OnActionPerformed = (se, a) =>
                 {
                     menu.MenuState = MainMenu.MainMenuState.Title;
@@ -1380,7 +1468,7 @@ namespace Game1
         {
             title = new TitleScreen(s, parent, this);
             saveFile = new SaveFile(s, parent, this,1);
-            options = new Options(s, parent, this);
+            //options = new Options(s, parent, this);
             this.Add(title);
         }
 

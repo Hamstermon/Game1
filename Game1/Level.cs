@@ -19,7 +19,7 @@ namespace Game1
         public MapData mapData;
         public Squared.Tiled.Object cameraFocus;
         Layer collision;
-        ObjectGroup objects;
+        public ObjectGroup objects;
         List<Squared.Tiled.Object> telePortLocations = new List<Squared.Tiled.Object>();
         ObjectGroup teleports;
         ObjectGroup teleportLocations;
@@ -34,15 +34,15 @@ namespace Game1
         int noOfTurns;
         public bool levelOver;
 
-        public void Init(Game1 test, int not, Map mapName)
+        public void Init(Game1 test, int not, Map mapName, int x, int y)
         {
             game = test;
             noOfTurns = not;
             levelOver = false;
-            LoadMap(mapName,0);
+            LoadMap(mapName,0,x,y);
         }
 
-        private void LoadMap(Map mapName,int mapID)
+        private void LoadMap(Map mapName,int mapID,int x, int y)
         {
             game.mapID = mapID;
             map = mapName;
@@ -58,15 +58,20 @@ namespace Game1
                 objects.Objects.Remove(enemy.Character.Name);
             enemies.Clear();
             tilepixel = mapName.TileWidth;
-            if (teleportLocations.Objects.ContainsKey("defaultPosition"))
+            if (x != -1 && y != -1)
+            {
+                CreatePlayer(x, y);
+            }
+            else if (teleportLocations.Objects.ContainsKey("defaultPosition"))
             {
                 Squared.Tiled.Object dest = teleportLocations.Objects["defaultPosition"];
                 CreatePlayer(dest.X, dest.Y);
             }
             else
                 CreatePlayer(0, 0);
-            foreach (Squared.Tiled.Object npc in objects.Objects.Values)
+            for (int i = 0; i < objects.Objects.Values.Count; i++)
             {
+                Squared.Tiled.Object npc = objects.Objects.Values[i];
                 if (npc.Type == "NPC")
                 {
                     string name = npc.Properties["npc"];
@@ -85,17 +90,18 @@ namespace Game1
                     bool visible = IsNPCVisible(npc);
                     if (!visible)
                     {
+                        Console.WriteLine("removal xd");
                         objects.Objects.Remove(npc.Name);
                     }
                 }
             }
             List<MapChar> enemySpawnList = game.FilterMapChar(mapID);
             enemySpawnPool = new List<MapChar>();
-            foreach (MapChar x in enemySpawnList)
+            foreach (MapChar m in enemySpawnList)
             {
-                for (int i = 0; i < x.Weight*10; i++)
+                for (int i = 0; i < m.Weight*10; i++)
                 {
-                    enemySpawnPool.Add(x);
+                    enemySpawnPool.Add(m);
                 }
             }
             Console.WriteLine("Load Map char count:" +game.mapChar.Count);
@@ -123,7 +129,7 @@ namespace Game1
         private void ChangeMap(string newMapName, string destination, int mapID)
         {
             game.play.mapWidget.Init(newMapName + ".tmx", game, game.graphics);
-            LoadMap(game.play.mapWidget.CurrentMap,mapID);
+            LoadMap(game.play.mapWidget.CurrentMap,mapID,-1,-1);
             Squared.Tiled.Object dest = teleportLocations.Objects[destination];
             player.X = dest.X + player.Width/2;
             player.Y = dest.Y + player.Height/2;
@@ -376,6 +382,9 @@ namespace Game1
                         case "test":
                             game.newDialogName = "test1";
                             break;
+                        case "bubbles":
+                            game.newDialogName = "bubbles1";
+                            break;
                         default: //if the npc has no logic return to the playing state
                             game.State = Game1.GameState.Playing;
                             break;
@@ -392,13 +401,19 @@ namespace Game1
             {
                 case "test":
                     break;
+                case "bubbles":
+                    if (game.FindEvent("bubblesBefriend") >= 0)
+                    {
+                        visible = false;
+                    }
+                    break;
             }
             return visible;
         }
 
         private Vector2 FindSpawnLocation()
         {
-            Vector2 position;
+            Vector2 position = new Vector2();
             List<Vector2> spawns = new List<Vector2>();
             Vector2 playerPos = new Vector2(player.X-player.Width/2,player.Y-player.Height/2);
             for (int x = 0; x < map.Width; x++)
@@ -430,7 +445,8 @@ namespace Game1
                     }
                 }
             }
-            position = spawns[rng.Next(0,spawns.Count)]; //picks a random spawnable tile
+            if (spawns.Count > 0)
+                position = spawns[rng.Next(0,spawns.Count)]; //picks a random spawnable tile
             return position;
         }
 
@@ -588,6 +604,7 @@ namespace Game1
                     Rectangle objrec = new Rectangle(entity.Value.X, entity.Value.Y, entity.Value.Width, entity.Value.Height);
                     if (playrec.Intersects(objrec))
                     {
+                        game.pause = true;
                         ChangeMap(entity.Value);
                         break;
                     }
