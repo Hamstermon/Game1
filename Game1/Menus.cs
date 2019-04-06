@@ -25,6 +25,7 @@ namespace Game1
     {
         public MapWidget mapWidget;
         public TextField trans;
+        public TextField end;
         public MapWidget battle;
         public BattleUI battleUI;
         public DialogUI dialogUI;
@@ -35,6 +36,13 @@ namespace Game1
             battle = new MapWidget(s);
             trans = new TextField(s)
             {                
+                Anchor = AnchoredRect.CreateFixed(0, 0, 1080, 800),
+                Color = Color.Black,
+                TextColor = Color.White
+            };
+            end = new TextField(s)
+            {
+                Text = "GAME OVER",
                 Anchor = AnchoredRect.CreateFixed(0, 0, 1080, 800),
                 Color = Color.Black,
                 TextColor = Color.White
@@ -306,6 +314,7 @@ namespace Game1
         public bool[] selection = new bool[5] { false, false, false, false, false };
         public bool fixedSelection = false;
         public bool selectAlly = false;
+        public bool snap = true;
         Game1 game;
         DockPanel main;
         public DockPanel skills;
@@ -348,6 +357,7 @@ namespace Game1
                 OnActionPerformed = (se, a) =>
                 {
                     mode = Mode.Move;
+                    parent.play.battleUI.commands.snap = false;
                     selection = new bool[5] {false,false,false,false,false};
                     selection[parent.battle.GetPosOfFighter(parent.currentFighter)] = true;
                     selectAlly = true;
@@ -394,7 +404,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
+                        parent.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
                         UpdateSelection();
                     }
                 }
@@ -410,7 +421,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection,fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
+                        parent.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
                         UpdateSelection();
                     }
                 }
@@ -426,7 +438,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
+                        parent.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
                         UpdateSelection();
                     }
                 }
@@ -455,12 +468,26 @@ namespace Game1
                     {
                         BattleAction action = new BattleAction();
                         bool hits = false;
-                        for (int i = 0; i < 5; i++)
+                        if (selectAlly)
                         {
-                            if (selection[i] == true && parent.battle.enemies[i] != null)
+                            for (int i = 0; i < 5; i++)
                             {
-                                hits = true;
-                                break;
+                                if (selection[i] == true && parent.battle.allies[i] != null)
+                                {
+                                    hits = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 5; i++)
+                            {
+                                if (selection[i] == true && parent.battle.enemies[i] != null)
+                                {
+                                    hits = true;
+                                    break;
+                                }
                             }
                         }
                         if (hits)
@@ -507,7 +534,10 @@ namespace Game1
                 if (selection[i] == true)
                 {
                     Squared.Tiled.Object temp = new Squared.Tiled.Object();
-                    temp.Texture = game.Content.Load<Texture2D>("selection");
+                    if (fixedSelection)
+                        temp.Texture = game.Content.Load<Texture2D>("selection2");
+                    else
+                        temp.Texture = game.Content.Load<Texture2D>("selection");
                     Squared.Tiled.Object spot;
                     if (selectAlly)
                         spot = spots.Objects["A" + i];
@@ -546,25 +576,86 @@ namespace Game1
             }
             return select;
         }
-        public void MoveSelection(bool up)
+        public void MoveSelection(bool up, Fighter[] targets)
         {
             if (!fixedSelection)
             {
-                if (up && selection[0] == false)
+                if (snap)
                 {
-                    selection[0] = selection[1];
-                    selection[1] = selection[2];
-                    selection[2] = selection[3];
-                    selection[3] = selection[4];
-                    selection[4] = false;
+                    bool[] temp = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+                    bool[] temp2 = new bool[5] { selection[0], selection[1], selection[2], selection[3], selection[4] };
+                    bool enemyFound = false;
+                    bool changed = true;
+                    int attempts = 0;
+                    do
+                    {
+                        enemyFound = false;
+                        changed = true;
+                        temp[0] = temp2[0];
+                        temp[1] = temp2[1];
+                        temp[2] = temp2[2];
+                        temp[3] = temp2[3];
+                        temp[4] = temp2[4];
+                        if (up && temp2[0] == false)
+                        {
+                            temp2[0] = temp2[1];
+                            temp2[1] = temp2[2];
+                            temp2[2] = temp2[3];
+                            temp2[3] = temp2[4];
+                            temp2[4] = false;
+                        }
+                        else if (!up && temp2[4] == false)
+                        {
+                            temp2[4] = temp2[3];
+                            temp2[3] = temp2[2];
+                            temp2[2] = temp2[1];
+                            temp2[1] = temp2[0];
+                            temp2[0] = false;
+                        }
+                        for (int i = 0; i < 5; i++)
+                        {
+                            if (temp2[i] == true && targets[i] != null && targets[i].CurrentHP > 0)
+                            {
+                                enemyFound = true;
+                                break;
+                            }
+                        }
+                        if (temp[0] == temp2[0] && temp[1] == temp2[1] && temp[2] == temp2[2] && temp[3] == temp2[3] && temp[4] == temp2[4])
+                        {
+                            changed = false;
+                        }
+                        attempts++;
+                        if (attempts > 5)
+                            break;
+                    }
+                    while (enemyFound == false || !changed);
+                    if (attempts <= 5)
+                    {
+                        selection[0] = temp2[0];
+                        selection[1] = temp2[1];
+                        selection[2] = temp2[2];
+                        selection[3] = temp2[3];
+                        selection[4] = temp2[4];
+                    }
                 }
-                else if (!up && selection[4] == false)
+                else
                 {
-                    selection[4] = selection[3];
-                    selection[3] = selection[2];
-                    selection[2] = selection[1];
-                    selection[1] = selection[0];
-                    selection[0] = false;
+                    if (up && selection[0] == false)
+                    {
+                        selection[0] = selection[1];
+                        selection[1] = selection[2];
+                        selection[2] = selection[3];
+                        selection[3] = selection[4];
+                        selection[4] = false;
+                    }
+                    else if (!up && selection[4] == false)
+                    {
+                        selection[4] = selection[3];
+                        selection[3] = selection[2];
+                        selection[2] = selection[1];
+                        selection[1] = selection[0];
+                        selection[0] = false;
+                    }
                 }
                 UpdateSelection();
             }
@@ -600,7 +691,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
+                        game.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill1), game.battle.allies);
                         UpdateSelection();
                     }
                 }
@@ -616,7 +708,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
+                        game.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill2), game.battle.allies);
                         UpdateSelection();
                     }
                 }
@@ -632,7 +725,8 @@ namespace Game1
                     if (aiming.Parent != this)
                     {
                         Add(aiming);
-                        (selection, fixedSelection) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
+                        game.play.battleUI.commands.snap = true;
+                        (selection, fixedSelection, selectAlly) = game.battle.LoadSelection(game.SearchAttack(game.currentFighter.Skill3), game.battle.allies);
                         UpdateSelection();
                     }
                 }

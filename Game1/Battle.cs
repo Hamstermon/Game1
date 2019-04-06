@@ -30,6 +30,13 @@ namespace Game1
         Regular,
         Animation
     }
+    public enum PostAnimation
+    {
+        Attack,
+        Done,
+        End,
+        TrueEnd
+    }
     public enum AnimationType
     {
         Hit,
@@ -317,9 +324,9 @@ namespace Game1
         public Fighter[] tempEnemyTeam;
         public bool[] tempSelection;
         public Attack tempAtkData;
-        public bool endingBattle = false;
         public string dialog;
         public BattleState state = BattleState.Regular;
+        public PostAnimation postAnimation = PostAnimation.Done;
 
         List<BattleAnimation> animation;
         public int currentFrameS = 0;
@@ -486,24 +493,31 @@ namespace Game1
             ui.RefreshFighters();
         }
 
-        public (bool[],bool) LoadSelection(Attack atk, Fighter[] team)
+        public (bool[],bool,bool) LoadSelection(Attack atk, Fighter[] team)
         {
             bool fixedSelection = atk.Fixed;
             bool[] selection = new bool[5] { false, false, false, false, false };
+            bool selectAlly = false;
             Fighter[] targets;
             if (team == allies)
             {
                 if (atk.Power >= 0)
                     targets = enemies;
                 else
+                {
                     targets = allies;
+                    selectAlly = true;
+                }
             }
             else
             {
                 if (atk.Power >= 0)
                     targets = allies;
                 else
+                {
                     targets = enemies;
+                    selectAlly = true;
+                }
             }
             for (int i = 0; i < 5; i++)
             {
@@ -539,7 +553,7 @@ namespace Game1
                     selection = best;
                 }
             }
-            return (selection,fixedSelection);
+            return (selection,fixedSelection,selectAlly);
         }
         public List<bool[]> GetAllPositions(bool[] selection, Fighter[] targets)
         {
@@ -599,6 +613,7 @@ namespace Game1
                     bool[] mp = new bool[3] { true, true, true };
                     bool[] selection;
                     bool fixedSelection;
+                    bool selectAlly;
                     Attack atk = new Attack();
                     do
                     {
@@ -626,7 +641,7 @@ namespace Game1
                                 break;
                             }
                         }
-                        if (atk.MP < i.CurrentMP && skill%4 != 3)
+                        if (skill % 4 != 3 && atk.MP > i.CurrentMP)
                         {
                             atk = new Attack();
                             mp[skill%4] = false;
@@ -639,7 +654,7 @@ namespace Game1
                     }
                     else if (action.command != BattleAction.Command.Defend)
                     {
-                        (selection, fixedSelection) = LoadSelection(atk, enemies);
+                        (selection, fixedSelection, selectAlly) = LoadSelection(atk, enemies);
                         List<bool[]> selections;
                         if (!fixedSelection)
                         {
@@ -727,9 +742,19 @@ namespace Game1
             Fighter[] enemyTeam;
             Attack atkData;
             if (team == allies)
-                enemyTeam = enemies;
+            {
+                if (ui.commands.selectAlly)
+                    enemyTeam = allies;
+                else
+                    enemyTeam = enemies;
+            }
             else
-                enemyTeam = allies;
+            {
+                if (ui.commands.selectAlly)
+                    enemyTeam = enemies;
+                else
+                    enemyTeam = allies;
+            }
             switch (action.command)
             {
                 case BattleAction.Command.Attack1:
@@ -791,6 +816,7 @@ namespace Game1
         public void AttackAnimation(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
         {
             state = BattleState.Animation;
+            postAnimation = PostAnimation.Attack;
             tempFighter = attacker;
             tempEnemyTeam = target;
             tempSelection = selection;
@@ -803,6 +829,7 @@ namespace Game1
             }
             else
                 frame.CharacterAnimation = CharAnimation.Ranged;
+            frame.Selection = selection;
             frame.TargetAnimation = CharAnimation.Hit;
             Animation.Add(frame);
         }
@@ -876,6 +903,15 @@ namespace Game1
                         if (hit)
                         {
                             damage = attack * data.Power / defense;
+                            if (defender.Defending)
+                                damage = damage / 2;
+                            CharData cData = parent.SearchChar(defender.ID);
+                            double multiplier = 1;
+                            if (cData.Weakness1 == data.Type || cData.Weakness2 == data.Type)
+                                multiplier = multiplier * 1.5;
+                            else if (cData.Resistance1 == data.Type || cData.Resistance2 == data.Type)
+                                multiplier = multiplier / 1.5;
+                            damage = (int)((float)damage * multiplier);
                             defender.CurrentHP = defender.CurrentHP - damage;
                             Console.WriteLine("DAMAGE DEAL");
                         }
@@ -887,15 +923,32 @@ namespace Game1
                     }
                 }
             }
+            else if (fullPower)
+            {
+                attacker.CurrentMP = attacker.CurrentMP - data.MP;
+                for (int i = 0; i < 5; i++)
+                {
+                    Fighter defender = target[i];
+                    if (selection[i] == true && defender != null)
+                    {
+                        Effect(attacker, defender, data.Effect1Name, data.Effect1Chance,0);
+                        Effect(attacker, defender, data.Effect2Name, data.Effect2Chance,0);
+                    }
+                }
+            }
         }
 
         public void Effect(Fighter attacker, Fighter defender, string effect, int chance, int damage)
         {
+            Console.WriteLine("Effect : " + effect);
             bool hit = true;
             if (rng.Next(1, 1000) > chance * 10)
                 hit = false;
+            Console.WriteLine(hit);
             if (hit)
             {
+                state = BattleState.Animation;
+                postAnimation = PostAnimation.Done;
                 if (effect == "atklow")
                 {
                     defender.ATKSTAGE--;
@@ -995,7 +1048,7 @@ namespace Game1
                         Animation.Add(frame);
                     }
                 }
-                else if (effect == "atkup")
+                else if (effect == "spdup")
                 {
                     attacker.SPDSTAGE++;
                     ui.Message(attacker.Name + "'s Speed rose");
@@ -1111,7 +1164,10 @@ namespace Game1
                 tempFighter = null;
                 tempSelection = new bool[5] { true, true, true, true, true };
                 tempAtkData = null;
-                endingBattle = true;
+                if (result == BattleResult.EnemyWin)
+                    postAnimation = PostAnimation.TrueEnd;
+                else
+                    postAnimation = PostAnimation.End;
                 Animation = new List<BattleAnimation>();
                 for (int i = 0; i < 3; i++)
                 {

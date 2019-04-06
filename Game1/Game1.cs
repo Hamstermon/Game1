@@ -52,9 +52,11 @@ namespace Game1
                     case GameState.Battle:
                     case GameState.EndGame:
                     case GameState.Dialog:
+                        IsFixedTimeStep = true;
                         pause = true;
                         break;
                     case GameState.Playing:
+                        IsFixedTimeStep = true;
                         pause = false;
                         break;
                 }
@@ -105,38 +107,28 @@ namespace Game1
         /// related content.  Calling base.Initialize will enumerate through any components
         /// and initialize them as well.
         /// </summary>
-        public enum Type
-        {
-            Normal,
-            Fire,
-            Water,
-            Electric,
-            Grass,
-            Ice,
-            Fighting,
-            Poison,
-            Ground,
-            Flying,
-            Psychic,
-            Bug,
-            Rock,
-            Ghost,
-            Dragon,
-            Dark,
-            Steel,
-            Light
-        }
+        //public enum Type
+        //{
+        //    Null,
+        //    Fire,
+        //    Water,
+        //    Ice,
+        //    Electric,
+        //    Light,
+        //    Dark,
+        //    Metal,
+        //    Wood,
+        //    Earth,
+        //    Wind
+        //}
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
+            IsFixedTimeStep = true;
             uiManager = UIManagerComponent.CreateAndInit(this, new InputManager(this), "Content").Manager;
             var styleSystem = uiManager.UIStyle;
             var styles = styleSystem.LoadStyles("Content/style.xml", "UI/Metro", GraphicsDevice);
             styleSystem.StyleResolver.StyleRules.AddRange(styles);
-            int[,] matchup = new int[18, 18];
-            for (int i = 0; i< 18; i++)
-            {
-            }
 
             main = new MainMenu(styleSystem, this);
             menu = new OverWorldMenu(styleSystem, this);
@@ -547,7 +539,7 @@ namespace Game1
         {
             saveFileID = saveID;
             state = GameState.Playing;
-            Character c = CreateCharacter(3, 5, -1, -1, 0, 0, 0, true);
+            Character c = CreateCharacter(3, 5, -1, -1, 0, 2, 1, true);
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
             playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
@@ -586,6 +578,7 @@ namespace Game1
             Console.WriteLine("saved");
         }
 
+        public Texture2D[,] frames = new Texture2D[64,64];
         public Texture2D GetCurrentFrame(OverworldChar charData, Squared.Tiled.Object character, int xOffset)
         {
             string spriteSheetName = charData.SpriteSheet;
@@ -597,31 +590,35 @@ namespace Game1
                 frameWidth = 64;
                 frameHeight = 64;
             }
-            Rectangle sourceRect = new Rectangle(charData.CurrentFrame * frameWidth + xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
-            Texture2D charTexture = Content.Load<Texture2D>(spriteSheetName);
-            //if (charTexture == null)
-            //    charTexture = game.Content.Load<Texture2D>("characterSpritesheet");
-            Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
-
-            charTexture.GetData(FrameTextureData);
-
-            Color[] test = new Color[frameHeight * frameWidth];
-
-            int count = 0;
-            for (int c = sourceRect.Top; c < sourceRect.Bottom; c++)
+            if (frames[charData.CurrentFrame + xOffset, yOffset] == null)
             {
-                for (int r = sourceRect.Left; r < sourceRect.Right; r++)
-                {
-                    Color colorA = FrameTextureData[r + (c * charTexture.Width)];
-                    test[count] = colorA;
-                    count++;
-                }
-            }
-            Texture2D frame = new Texture2D(graphics.GraphicsDevice, frameWidth, frameHeight);
-            frame.SetData(test);
-            character.Texture = frame;
+                Rectangle sourceRect = new Rectangle(charData.CurrentFrame * frameWidth + xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
+                Texture2D charTexture = Content.Load<Texture2D>(spriteSheetName);
+                //if (charTexture == null)
+                //    charTexture = game.Content.Load<Texture2D>("characterSpritesheet");
+                Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
 
-            return frame;
+                charTexture.GetData(FrameTextureData);
+
+                Color[] test = new Color[frameHeight * frameWidth];
+
+                int count = 0;
+                for (int c = sourceRect.Top; c < sourceRect.Bottom; c++)
+                {
+                    for (int r = sourceRect.Left; r < sourceRect.Right; r++)
+                    {
+                        Color colorA = FrameTextureData[r + (c * charTexture.Width)];
+                        test[count] = colorA;
+                        count++;
+                    }
+                }
+                Texture2D frame = new Texture2D(graphics.GraphicsDevice, frameWidth, frameHeight);
+                frame.SetData(test);
+                frames[charData.CurrentFrame + xOffset, yOffset] = frame;
+            }
+            character.Texture = frames[charData.CurrentFrame + xOffset, yOffset];
+
+            return frames[charData.CurrentFrame + xOffset, yOffset];
         }
 
         public Texture2D GetCurrentFrame(Squared.Tiled.Object character, int xOffset)
@@ -636,29 +633,33 @@ namespace Game1
                 frameWidth = 64;
                 frameHeight = 64;
             }
-            Rectangle sourceRect = new Rectangle(xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
-            Texture2D charTexture = Content.Load<Texture2D>(spriteSheetName);
-            Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
-
-            charTexture.GetData(FrameTextureData);
-
-            Color[] test = new Color[frameHeight * frameWidth];
-
-            int count = 0;
-            for (int c = sourceRect.Top; c < sourceRect.Bottom; c++)
+            if (frames[xOffset, yOffset] == null)
             {
-                for (int r = sourceRect.Left; r < sourceRect.Right; r++)
-                {
-                    Color colorA = FrameTextureData[r + (c * charTexture.Width)];
-                    test[count] = colorA;
-                    count++;
-                }
-            }
-            Texture2D frame = new Texture2D(graphics.GraphicsDevice, frameWidth, frameHeight);
-            frame.SetData(test);
-            character.Texture = frame;
+                Rectangle sourceRect = new Rectangle(xOffset * frameWidth, yOffset * frameHeight, frameWidth, frameHeight);
+                Texture2D charTexture = Content.Load<Texture2D>(spriteSheetName);
+                Color[] FrameTextureData = new Color[charTexture.Width * charTexture.Height];
 
-            return frame;
+                charTexture.GetData(FrameTextureData);
+
+                Color[] test = new Color[frameHeight * frameWidth];
+
+                int count = 0;
+                for (int c = sourceRect.Top; c < sourceRect.Bottom; c++)
+                {
+                    for (int r = sourceRect.Left; r < sourceRect.Right; r++)
+                    {
+                        Color colorA = FrameTextureData[r + (c * charTexture.Width)];
+                        test[count] = colorA;
+                        count++;
+                    }
+                }
+                Texture2D frame = new Texture2D(graphics.GraphicsDevice, frameWidth, frameHeight);
+                frame.SetData(test);
+                frames[xOffset, yOffset] = frame;
+            }
+            character.Texture = frames[xOffset, yOffset];
+
+            return frames[xOffset, yOffset];
         }
 
         public Squared.Tiled.Object CreateObject(string name, string spriteSheet, int id, int X, int Y, int width, int height)
@@ -778,7 +779,7 @@ namespace Game1
                             switch (dialogEvent)
                             {
                                 case "befriend":
-                                    Character c = CreateCharacter(2, 5, -1, -1, 0, 0, 0, true);
+                                    Character c = CreateCharacter(2, 5, -1, -1, 0, 5, 6, true);
                                     playerSaveData.CharacterList.Add(c);
                                     int index = playerSaveData.CharacterList.IndexOf(c);
                                     int slot = -1;
@@ -833,67 +834,9 @@ namespace Game1
         bool battleKeyDown = false;
         public void UpdateBattle(GameTime gameTime) 
         {
-            if (battle.state == BattleState.Regular)
-            {
-                currentFighter = battle.order[battle.turnNumber];
-                BattleAction action;
-                bool playerControlled = false;
-                if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
-                {
-                    battleKeyDown = true;
-                    play.battleUI.commands.MoveSelection(true);
-                }
-                else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
-                {
-                    battleKeyDown = true;
-                    play.battleUI.commands.MoveSelection(false);
-                }
-                else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
-                {
-                    battleKeyDown = false;
-                }
-                if (Keyboard.GetState().IsKeyDown(Keys.Down))
-                {
-                    level.MoveCharacter(player, level.player, 2);
-                }
-                if (battle.GetTeam(currentFighter) == battle.allies)
-                    playerControlled = true;
-                if (playerControlled)
-                {
-                    if (play.battleUI.commands.Parent != play.battleUI)
-                    {
-                        play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
-                        play.battleUI.commands.ResetVisibility();
-                        Attack atk1 = SearchAttack(currentFighter.Skill1);
-                        Attack atk2 = SearchAttack(currentFighter.Skill2);
-                        Attack atk3 = SearchAttack(currentFighter.Skill3);
-                        play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
-                    }
-                    //play.battleUI.commands.Visibility = Visibility.Visible;
-                    if (battle.playerAction != null)
-                    {
-                        Console.WriteLine("player turn");
-                        battle.Turn(currentFighter, battle.playerAction);
-                        play.battleUI.Remove(play.battleUI.commands);
-                        //play.battleUI.commands.Visibility = Visibility.Hidden;
-                        battle.playerAction = null;
-                    }
-                }
-                else
-                {
-                    action = battle.Ai(currentFighter);
-                    Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
-                    battle.Turn(currentFighter, action);
-                    Console.WriteLine("EnemyTurn");
-                }
-                BattleResult battleOutcome = battle.CheckVictory();
-                if (battleOutcome != BattleResult.None)
-                {
-                    Console.WriteLine("dieded" + battleOutcome.ToString());
-                    battle.EndBattle(battleOutcome);
-                }
-            }
-            else if (battle.state == BattleState.Animation)
+            BattleResult battleOutcome = battle.CheckVictory();
+            play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
+            if (battle.state == BattleState.Animation)
             {
                 battle.elapsedTime += gameTime.ElapsedGameTime.Milliseconds;
                 int xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].CharacterAnimation);
@@ -926,13 +869,94 @@ namespace Game1
                     battle.currentKeyFrame++;
                     if (battle.currentKeyFrame >= battle.Animation.Count)
                     {
-                        battle.state = BattleState.Regular;
-                        if (battle.endingBattle == false)
-                            battle.Attack(battle.tempFighter, battle.tempEnemyTeam, battle.tempSelection, battle.tempAtkData);
-                        else
-                            battle.ResumeEndBattle();
-                        battle.UpdateFighters();
                         play.battleUI.Message("");
+                        battle.state = BattleState.Regular;
+                        if (battle.postAnimation == PostAnimation.Attack)
+                            battle.Attack(battle.tempFighter, battle.tempEnemyTeam, battle.tempSelection, battle.tempAtkData);
+
+                        else if (battle.postAnimation == PostAnimation.End)
+                            battle.ResumeEndBattle();
+                        else if (battle.postAnimation == PostAnimation.TrueEnd)
+                        {
+                            state = GameState.EndGame;
+                            play.Remove(play.battle);
+                            play.Remove(play.battleUI);
+                            play.Add(play.end);
+                        }
+                        battle.UpdateFighters();
+                    }
+                }
+            }
+            else if (battleOutcome != BattleResult.None)
+            {
+                Console.WriteLine("dieded" + battleOutcome.ToString());
+                battle.EndBattle(battleOutcome);
+            }
+            else if (battle.state == BattleState.Regular)
+            {
+                currentFighter = battle.order[battle.turnNumber];
+                if (currentFighter.CurrentHP > 0)
+                {
+                    BattleAction action;
+                    bool playerControlled = false;
+                    Fighter[] fs = battle.enemies;
+                    if (play.battleUI.commands.selectAlly)
+                        fs = battle.allies;
+                    if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
+                    {
+                        battleKeyDown = true;
+                        play.battleUI.commands.MoveSelection(true,fs);
+                    }
+                    else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
+                    {
+                        battleKeyDown = true;
+                        play.battleUI.commands.MoveSelection(false,fs);
+                    }
+                    else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
+                    {
+                        battleKeyDown = false;
+                    }
+                    if (Keyboard.GetState().IsKeyDown(Keys.Down))
+                    {
+                        level.MoveCharacter(player, level.player, 2);
+                    }
+                    if (battle.GetTeam(currentFighter) == battle.allies)
+                        playerControlled = true;
+                    if (playerControlled)
+                    {
+                        if (play.battleUI.commands.Parent != play.battleUI)
+                        {
+                            play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
+                            play.battleUI.commands.ResetVisibility();
+                            Attack atk1 = SearchAttack(currentFighter.Skill1);
+                            Attack atk2 = SearchAttack(currentFighter.Skill2);
+                            Attack atk3 = SearchAttack(currentFighter.Skill3);
+                            play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
+                        }
+                        //play.battleUI.commands.Visibility = Visibility.Visible;
+                        if (battle.playerAction != null)
+                        {
+                            Console.WriteLine("player turn");
+                            battle.Turn(currentFighter, battle.playerAction);
+                            play.battleUI.Remove(play.battleUI.commands);
+                            //play.battleUI.commands.Visibility = Visibility.Hidden;
+                            battle.playerAction = null;
+                        }
+                    }
+                    else
+                    {
+                        action = battle.Ai(currentFighter);
+                        Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
+                        battle.Turn(currentFighter, action);
+                        Console.WriteLine("EnemyTurn");
+                    }
+                }
+                else
+                {
+                    battle.turnNumber++;
+                    if (battle.turnNumber >= battle.order.Count)
+                    {
+                        battle.TurnCycle();
                     }
                 }
             }
@@ -974,7 +998,7 @@ namespace Game1
 
         public void UpdateEndGame()
         {
-
+            
         }
 
         /// <summary>

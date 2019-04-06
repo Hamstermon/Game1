@@ -1220,9 +1220,27 @@ namespace Game1
 
         protected override void DrawWidget(IBatchedDrawingService drawingService)
         {
-            viewportPosition = new Vector2(cameraObject.X + (cameraObject.Width/2) - (g.PreferredBackBufferWidth / 2), cameraObject.Y + (cameraObject.Height/2) - (g.PreferredBackBufferHeight / 2));
+            int x = cameraObject.X - (g.PreferredBackBufferWidth / 2) + (cameraObject.Width / 2);
+            int y = cameraObject.Y - (g.PreferredBackBufferHeight / 2) + (cameraObject.Height / 2);
+            if (x + g.PreferredBackBufferWidth > map.Width * map.TileWidth)
+            {
+                x = map.Width * map.TileWidth - g.PreferredBackBufferWidth;
+            }
+            else if (x < 0)
+            {
+                x = 0;
+            }
+            if (y + g.PreferredBackBufferHeight > map.Height * map.TileHeight)
+            {
+                y = map.Height * map.TileHeight - g.PreferredBackBufferHeight;
+            }
+            else if (y < 0)
+            {
+                y = 0;
+            }
+            viewportPosition = new Vector2(x, y);
+            //viewportPosition = new Vector2(cameraObject.X + (cameraObject.Width/2) - (g.PreferredBackBufferWidth / 2), cameraObject.Y + (cameraObject.Height/2) - (g.PreferredBackBufferHeight / 2));
             map.Draw(drawingService, new Rectangle(0, 0, drawingService.GraphicsDevice.Viewport.Width, drawingService.GraphicsDevice.Viewport.Height), viewportPosition);
         }
-
     }
 }

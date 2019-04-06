@@ -145,23 +145,26 @@ namespace Game1
             set { xp = value; }
             get { return xp; }
         }
-        string type1 = "";
-        public string Type1
+        string w1,w2,r1,r2 = "";
+        public string Weakness1
         {
-            set { type1 = value; }
-            get { return type1; }
+            set { w1 = value; }
+            get { return w1; }
         }
-        string type2 = "";
-        public string Type2
+        public string Weakness2
         {
-            set { type2 = value; }
-            get { return type2; }
+            set { w2 = value; }
+            get { return w2; }
         }
-        string type3 = "";
-        public string Type3
+        public string Resistance1
         {
-            set { type3 = value; }
-            get { return type3; }
+            set { r1 = value; }
+            get { return r1; }
+        }
+        public string Resistance2
+        {
+            set { r2 = value; }
+            get { return r2; }
         }
         int hp = 0;
         public int HP

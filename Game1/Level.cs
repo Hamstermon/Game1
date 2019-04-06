@@ -141,7 +141,18 @@ namespace Game1
             {
                 cameraFocus = player;
                 game.play.mapWidget.CameraObject = cameraFocus;
-                viewportPosition = new Vector2(cameraFocus.X - (g.PreferredBackBufferWidth / 2), cameraFocus.Y - (g.PreferredBackBufferHeight / 2));
+                //int x = cameraFocus.X - (g.PreferredBackBufferWidth / 2) - (cameraFocus.Width / 2);
+                //int y = cameraFocus.Y - (g.PreferredBackBufferHeight / 2) - (cameraFocus.Height / 2);
+
+                //if (x + (g.PreferredBackBufferWidth / 2) + (cameraFocus.Width / 2) > map.Width * map.TileWidth)
+                //{
+                //    x = map.Width * map.TileWidth;
+                //}
+                //else if (x - (g.PreferredBackBufferWidth / 2) - (cameraFocus.Width / 2) < 0)
+                //{
+                //    x = 0;
+                //}
+                //viewportPosition = new Vector2(x, y);
                 foreach (OverworldEnemy enemy in enemies)
                 {
                     if (enemy.Despawn == false)
@@ -210,24 +221,24 @@ namespace Game1
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    if (collision.GetTile(x, y) == 84)
+                    if (collision.GetTile(x, y) == 6)
                     {
                         Node temp = new Node();
                         temp.Position = new Vector2(x, y);
                         temp.Adjacent = new bool[4] { false, false, false, false };
-                        if (x - 1 >= 0 && collision.GetTile(x - 1, y) == 84)
+                        if (x - 1 >= 0 && collision.GetTile(x - 1, y) == 6)
                         {
                             temp.Adjacent[1] = true;
                         }
-                        if (x + 1 <= map.Width && collision.GetTile(x + 1, y) == 84)
+                        if (x + 1 <= map.Width && collision.GetTile(x + 1, y) == 6)
                         {
                             temp.Adjacent[3] = true;
                         }
-                        if (y - 1 >= 0 && collision.GetTile(x, y - 1) == 84)
+                        if (y - 1 >= 0 && collision.GetTile(x, y - 1) == 6)
                         {
                             temp.Adjacent[2] = true;
                         }
-                        if (y + 1 <= map.Height && collision.GetTile(x, y + 1) == 84)
+                        if (y + 1 <= map.Height && collision.GetTile(x, y + 1) == 6)
                         {
                             temp.Adjacent[0] = true;
                         }
@@ -420,7 +431,7 @@ namespace Game1
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    if (collision.GetTile(x, y) == 84) //Checking if the tile is a tile that can be spawned on
+                    if (collision.GetTile(x, y) == 6) //Checking if the tile is a tile that can be spawned on
                     {
                         Vector2 tilePos = new Vector2(x * tilepixel, y * tilepixel);
                         double magnitude = Math.Sqrt(Math.Pow((playerPos.X - tilePos.X), 2) + Math.Pow((playerPos.Y - tilePos.Y), 2));
@@ -495,7 +506,7 @@ namespace Game1
                 else
                 {
                     double magnitude = Math.Sqrt(Math.Pow((playerPos.X - charPos.X), 2) + Math.Pow((playerPos.Y - charPos.Y), 2));
-                    if (magnitude >= 512.0) //if the enemy is too far from the player it will have a chance to despawn
+                    if (magnitude >= 1024.0) //if the enemy is too far from the player it will have a chance to despawn
                     {
                         if (rng.Next(0, 100) < 50)
                         {
@@ -570,7 +581,7 @@ namespace Game1
             {
                 for (int y = 0; y < map.Height; y++)
                 {
-                    if (collision.GetTile(x, y) != 0 && collision.GetTile(x, y) != 84)
+                    if (collision.GetTile(x, y) != 0 && collision.GetTile(x, y) != 6)
                     {
                         Rectangle tile = new Rectangle(
                             (int)x * tilepixel,
