@@ -8,7 +8,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.IO;
 using Squared.Tiled;
-using System.Collections.Generic;
 using Steropes.UI;
 using Steropes.UI.Components;
 using Steropes.UI.Input;
@@ -28,24 +27,21 @@ namespace Game1
         public TextField trans;
         public MapWidget battle;
         public BattleUI battleUI;
+        public DialogUI dialogUI;
 
         public Playing(IUIStyle s, Game1 parent, GraphicsDeviceManager man) : base(s)
         {
             mapWidget = new MapWidget(s);
             battle = new MapWidget(s);
             trans = new TextField(s)
-            {
-                //Alignment = Alignment.Center,
-                
+            {                
                 Anchor = AnchoredRect.CreateFixed(0, 0, 1080, 800),
                 Color = Color.Black,
                 TextColor = Color.White
             };
             battleUI = new BattleUI(s, parent);
+            dialogUI = new DialogUI(s, parent);
             Add(mapWidget);
-            //Add(trans);
-            //Add(battle);
-            //Add(battleUI);
         }
 
         public void TransitionVisible(bool visible)
@@ -54,16 +50,119 @@ namespace Game1
             {
                 Add(trans);
                 Remove(mapWidget);
-                //trans.Visibility = Visibility.Visible;
-                //mapWidget.Visibility = Visibility.Hidden;
             }
             else
             {
                 Add(mapWidget);
                 Remove(trans);
-                //trans.Visibility = Visibility.Hidden;
-                //mapWidget.Visibility = Visibility.Visible;
             }
+        }
+    }
+
+    public class DialogUI : DockPanel
+    {
+        int width = 1080;
+        int height = 800;
+        public DialogBox box;
+        public DialogOptions options;
+        public DialogUI(IUIStyle s, Game1 parent) : base(s)
+        {
+            Grid grid = new Grid(s) { Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
+            box = new DialogBox(s, parent, width, height / 4) { Anchor = AnchoredRect.CreateFixed(0, 3 * height / 4, width, height) };
+            options = new DialogOptions(s, parent);
+            grid.Add(box);
+            Add(grid);
+            Add(options,DockPanelConstraint.Left);
+        }
+    }
+
+    public class DialogOptions : DockPanel
+    {
+        List<Button> options = new List<Button>();
+        IUIStyle style;
+        Game1 game;
+        public DialogOptions(IUIStyle s, Game1 parent) : base(s)
+        {
+            style = s;
+            game = parent;
+        }
+        public void NewOptions(Dialog dialog)
+        {
+            List<Button> toRemove = new List<Button>();
+            foreach (Button i in options)
+            {
+                toRemove.Add(i);
+            }
+            foreach(Button i in toRemove)
+            {
+                options.Remove(i);
+                Remove(i);
+            }
+            if (dialog.OptionName1 != "")
+            {
+                Button button = new Button(style, dialog.OptionName1)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext1;
+                        game.dialogEvent = dialog.OptionEvent1;
+                    }
+                };
+                options.Add(button);
+                Add(button);
+            }
+            if (dialog.OptionName2 != "")
+            {
+                Button button = new Button(style, dialog.OptionName2)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext2;
+                        game.dialogEvent = dialog.OptionEvent2;
+                    }
+                };
+                options.Add(button);
+                Add(button);
+            }
+            if (dialog.OptionName3 != "")
+            {
+                Button button = new Button(style, dialog.OptionName3)
+                {
+                    OnActionPerformed = (se, a) =>
+                    {
+                        game.newDialogName = dialog.OptionNext3;
+                        game.dialogEvent = dialog.OptionEvent3;
+                    }
+                };
+                options.Add(button);
+                Add(button);
+            }
+        }
+    }
+
+    public class DialogBox : Grid
+    {
+        TextField bg;
+        Label n;
+        Label txt;
+        public DialogBox(IUIStyle s, Game1 parent, int width, int height) : base(s)
+        {
+            bg = new TextField(s) { Color = Color.LightCyan, ReadOnly = true, Anchor = AnchoredRect.CreateFixed(0, 0, width, height) };
+            n = new Label(s, "name") { Anchor = AnchoredRect.CreateFixed(0, 0, width, Convert.ToInt32(height * 0.25)), TextColor = Color.Black };
+            txt = new Label(s, "text") { Anchor = AnchoredRect.CreateFixed(0, Convert.ToInt32(height * 0.25), width, Convert.ToInt32(height * 0.75)), TextColor = Color.Black };
+            Add(bg);
+            Add(n);
+            Add(txt);
+        }
+        public string Name
+        {
+            set { n.Text = value; }
+            get { return n.Text; }
+        }
+        public string Text
+        {
+            set { txt.Text = value; }
+            get { return txt.Text; }
         }
     }
 
@@ -75,6 +174,7 @@ namespace Game1
         public BattleCommands commands;
         PartySlotB[] playerSlot;
         PartySlotB[] enemySlot;
+        TextField message;
         Game1 game;
 
         public BattleUI(IUIStyle s, Game1 parent) : base(s)
@@ -98,7 +198,8 @@ namespace Game1
                 
                 players.Add(temp, DockPanelConstraint.Left);
             }
-            commands = new BattleCommands(s, parent);;
+            commands = new BattleCommands(s, parent);
+            message = new TextField(s) { Anchor = AnchoredRect.CreateFixed(0, 6 * height / 9, width, height / 9), TextColor = Color.Black, Color = Color.LightGray};
             grid.Add(enemies);
             grid.Add(players);
             Add(grid);
@@ -131,6 +232,24 @@ namespace Game1
                 else
                 {
                     enemySlot[i].Visibility = Visibility.Hidden;
+                }
+            }
+        }
+        public void Message(string msg)
+        {
+            message.Text = msg;
+            if (msg == "")
+            {
+                if (message.Parent == this)
+                {
+                    Remove(message);
+                }
+            }
+            else
+            {
+                if (message.Parent != this)
+                {
+                    Add(message);
                 }
             }
         }
@@ -539,18 +658,25 @@ namespace Game1
                     menu.MenuState = OverWorldMenu.OverworldMenuState.Party;
                 }
             };
-            var inv = new Button(s, "Inventory")
+            //var inv = new Button(s, "Inventory")
+            //{
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = OverWorldMenu.OverworldMenuState.Inventory;
+            //    }
+            //};
+            //var opt = new Button(s, "Options")
+            //{
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = OverWorldMenu.OverworldMenuState.Options;
+            //    }
+            //};
+            var sav = new Button(s, "Save")
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    menu.MenuState = OverWorldMenu.OverworldMenuState.Inventory;
-                }
-            };
-            var opt = new Button(s, "Options")
-            {
-                OnActionPerformed = (se, a) =>
-                {
-                    menu.MenuState = OverWorldMenu.OverworldMenuState.Options;
+                    parent.SaveGame();
                 }
             };
             var exit = new Button(s, "Exit")
@@ -563,8 +689,9 @@ namespace Game1
                 }
             };
             this.Add(party);
-            this.Add(inv);
-            this.Add(opt);
+            //this.Add(inv);
+            //this.Add(opt);
+            this.Add(sav);
             this.Add(exit);
         }
     }
@@ -576,15 +703,17 @@ namespace Game1
         UITexture uiTexture;
         string location;
         int pos;
+        public Button button;
+        public Character character;
         public PartySlot(IUIStyle s, Game1 parent, OverWorldMenu menu, Party party) : base(s)
         {
             n = new Label(s,"aaaaa");
             l = new Label(s,"lv.0");
-            var button = new Button(s, "Select")
+            button = new Button(s, "Select")
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    party.CharSelect(location,pos);
+                    party.CharSelect(this,character);
                 }
             };
             Add(n);
@@ -922,6 +1051,7 @@ namespace Game1
         PartySlot[] slotsP;
         PartySlot[] slotsR;
         PartyTasks tasks;
+        PartySlot selectedMember;
         Info info;
         public enum EditMode
         {
@@ -934,6 +1064,7 @@ namespace Game1
             set
             {
                 mode = value;
+                SelectedMember = null;
                 tasks.Task(mode);
             }
             get { return mode; }
@@ -997,42 +1128,127 @@ namespace Game1
         public void UpdateParty()
         {
             PlayerSaveData psd = parent.playerSaveData;
+            List<Character> temp = new List<Character>();
+            foreach (Character c in psd.CharacterList)
+            {
+                temp.Add(c);
+            }
             for (int i = 0; i < 5; i++)
             {
-                int id = psd.Party[i];
                 PartySlot p = slotsP[i];
-                if (id != -1)
+                if (psd.Party[i] == -1)
                 {
-                    Character c = psd.CharacterList[id];
-                    CharData info = parent.SearchChar(c.CharacterID);
-                    p.Name = info.Name;
-                    p.Level = Convert.ToString(c.Level);
+                    p.character = null;
+                    p.Name = "";
+                    p.Level = "";
                 }
                 else
                 {
+                    p.character = psd.CharacterList[psd.Party[i]];
+                    temp.Remove(psd.CharacterList[psd.Party[i]]);
+                    CharData info = parent.SearchChar(p.character.CharacterID);
+                    p.Name = info.Name;
+                    p.Level = Convert.ToString(p.character.Level);
+                }
+            }
+            for (int i = 0; i < slotsR.Length; i++)
+            {
+                PartySlot p = slotsR[i];
+                if (i < temp.Count)
+                {
+                    p.character = temp[i];
+                    CharData info = parent.SearchChar(p.character.CharacterID);
+                    p.Name = info.Name;
+                    p.Level = Convert.ToString(p.character.Level);
+                }
+                else
+                {
+                    p.character = null;
                     p.Name = "";
                     p.Level = "";
                 }
             }
         }
 
-        public void CharSelect(string location, int pos)
+        public void CharSelect(PartySlot slot, Character c)
         {
+            PlayerSaveData psd = parent.playerSaveData;
             switch (mode)
             {
                 case EditMode.Arrange:
-                    break;
-                case EditMode.Stats:
-                    if (location == "P")
+                    if (SelectedMember == null)
                     {
-                        PlayerSaveData psd = parent.playerSaveData;
-                        Character c = psd.CharacterList[psd.Party[pos]];
-                        if (c != null)
-                            info.LoadInfo(c);
+                        SelectedMember = slot;
+                    }
+                    else
+                    {
+                        int indexM1 = -1;
+                        if (SelectedMember.character != null)
+                            indexM1 = psd.CharacterList.IndexOf(SelectedMember.character);
+                        string locM1 = SelectedMember.Location;
+                        int posM1 = SelectedMember.Position;
+                        int indexM2 = -1;
+                        if (slot.character != null)
+                            indexM2 = psd.CharacterList.IndexOf(slot.character);
+                        string locM2 = slot.Location;
+                        int posM2 = slot.Position;
+                        int count = 0;
+                        for (int i = 0; i < 5; i++)
+                        {
+                            if (psd.Party[i] != -1)
+                                count++;
+                        }
+                        int partyIncrease = 0;
+                        if (locM1 == "P" && locM2 == "R")
+                        {
+                            if (indexM1 == -1)
+                                partyIncrease++;
+                            if (indexM2 == -1)
+                                partyIncrease--;
+                        }
+                        else if (locM1 == "R" && locM2 == "P")
+                        {
+                            if (indexM1 == -1)
+                                partyIncrease--;
+                            if (indexM2 == -1)
+                                partyIncrease++;
+                        }
+                        if (count + partyIncrease <= 3 && count + partyIncrease >= 1)
+                        {
+                            if (locM1 == "P")
+                                psd.Party[posM1] = indexM2;
+                            if (locM2 == "P")
+                                psd.Party[posM2] = indexM1;
+                        }
+                        SelectedMember = null;
                     }
                     break;
+                case EditMode.Stats:
+                    if (c != null)
+                        info.LoadInfo(c);
+                    break;
             }
+
+            UpdateParty();
         }
+
+        public PartySlot SelectedMember
+        {
+            set
+            {
+                if (selectedMember != null)
+                {
+                    selectedMember.button.Color = Color.White;
+                }
+                selectedMember = value;
+                if (selectedMember != null)
+                {
+                    selectedMember.button.Color = Color.Green;
+                }
+            }
+            get { return selectedMember; }
+        }
+
     }
 
 
@@ -1070,14 +1286,14 @@ namespace Game1
         OverworldMenuState menuState = OverworldMenuState.Main;
         MainOW main;
         Party party;
-        Inventory inventory;
-        Options options;
+        //Inventory inventory;
+        //Options options;
         public OverWorldMenu(IUIStyle s, Game1 parent) : base(s)
         {
             main = new MainOW(s, parent, this);
             party = new Party(s, parent, this);
-            inventory = new Inventory(s, parent, this);
-            options = new Options(s, parent, this);
+            //inventory = new Inventory(s, parent, this);
+            //options = new Options(s, parent, this);
             this.Add(main);
         }
 
@@ -1094,10 +1310,10 @@ namespace Game1
                         this.Remove(party);
                         break;
                     case OverworldMenuState.Inventory:
-                        this.Remove(inventory);
+                        //this.Remove(inventory);
                         break;
                     case OverworldMenuState.Options:
-                        this.Remove(options);
+                        //this.Remove(options);
                         break;
                 }
                 menuState = value;
@@ -1111,10 +1327,10 @@ namespace Game1
                         party.UpdateParty();
                         break;
                     case OverworldMenuState.Inventory:
-                        this.Add(inventory);
+                        //this.Add(inventory);
                         break;
                     case OverworldMenuState.Options:
-                        this.Add(options);
+                        //this.Add(options);
                         break;
                 }
             }
@@ -1145,18 +1361,18 @@ namespace Game1
                     menu.MenuState = MainMenu.MainMenuState.SaveFile;
                 }
             };
-            var options = new Button(s, "Options")
-            {
-                Anchor = AnchoredRect.CreateFixed(10, 220, 120, 80),
-                Color = Color.Aqua,
-                OnActionPerformed = (se, a) =>
-                {
-                    menu.MenuState = MainMenu.MainMenuState.Options;
-                }
-            };
+            //var options = new Button(s, "Options")
+            //{
+            //    Anchor = AnchoredRect.CreateFixed(10, 220, 120, 80),
+            //    Color = Color.Aqua,
+            //    OnActionPerformed = (se, a) =>
+            //    {
+            //        menu.MenuState = MainMenu.MainMenuState.Options;
+            //    }
+            //};
             this.Add(bg);
             this.Add(play);
-            this.Add(options);
+            //this.Add(options);
         }
     }
 
@@ -1166,12 +1382,11 @@ namespace Game1
         int height = 800;
         UITexture uiTexture;
 
-        public SaveFile(IUIStyle s, Game1 parent, MainMenu menu) : base(s)
+        public SaveFile(IUIStyle s, Game1 parent, MainMenu menu, int saveFileID) : base(s)
         {
             var back = new Button(s, "Back")
             {
                 //Anchor = AnchoredRect.CreateFixed(10, height-100, 120, 80),
-                Color = Color.OrangeRed,
                 OnActionPerformed = (se, a) =>
                 {
                     menu.MenuState = MainMenu.MainMenuState.Title;
@@ -1181,16 +1396,16 @@ namespace Game1
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    //parent.LoadGame(1);
+                    parent.LoadGame(saveFileID);
                 },
                 //Anchor = AnchoredRect.CreateFixed(0, 0, 200, 80),
-                Color = Color.OrangeRed,
+                Color = Color.Green,
             };
             var new1 = new Button(s, "New Game")
             {
                 OnActionPerformed = (se, a) =>
                 {
-                    parent.CreateNewGame(1);
+                    parent.CreateNewGame(saveFileID);
                 },
                 //Anchor = AnchoredRect.CreateFixed(0, 0, 200, 80),
                 Color = Color.OrangeRed,
@@ -1252,8 +1467,8 @@ namespace Game1
         public MainMenu(IUIStyle s, Game1 parent) : base(s)
         {
             title = new TitleScreen(s, parent, this);
-            saveFile = new SaveFile(s, parent, this);
-            options = new Options(s, parent, this);
+            saveFile = new SaveFile(s, parent, this,1);
+            //options = new Options(s, parent, this);
             this.Add(title);
         }
 

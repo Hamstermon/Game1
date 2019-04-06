@@ -1,1 +1,1 @@
-[{"MapID":0,"Name":"map 1","MapFileName":"testMap1","BattleFileName":"battlefield","SpawnCap":6},{"MapID":1,"Name":"map 2","MapFileName":"testMap2","BattleFileName":"battlefield","SpawnCap":5}]
+[{"MapID":0,"Name":"map 1","MapFileName":"testMap1","BattleFileName":"battlefield","SpawnCap":3},{"MapID":1,"Name":"map 2","MapFileName":"testMap2","BattleFileName":"battlefield","SpawnCap":3}]

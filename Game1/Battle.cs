@@ -19,6 +19,61 @@ namespace Game1
         Frozen,
         Confused
     }
+    public enum BattleResult
+    {
+        None,
+        PlayerWin,
+        EnemyWin
+    }
+    public enum BattleState
+    {
+        Regular,
+        Animation
+    }
+    public enum AnimationType
+    {
+        Hit,
+        Fire,
+        Water,
+        Leaf,
+        Electric
+    }
+    public enum CharAnimation
+    {
+        None,
+        Physical,
+        Ranged,
+        Happy,
+        Hit
+    }
+    public class BattleAnimation
+    {
+        AnimationType skillA;
+        public AnimationType SkillAnimation
+        {
+            get { return skillA; }
+            set { skillA = value; }
+        }
+        CharAnimation charA;
+        public CharAnimation CharacterAnimation
+        {
+            get { return charA; }
+            set { charA = value; }
+        }
+        CharAnimation targA;
+        public CharAnimation TargetAnimation
+        {
+            get { return targA; }
+            set { targA = value; }
+        }
+        bool[] selection = new bool[5] { false, false, false, false, false };
+        public bool[] Selection
+        {
+            set { selection = value; }
+            get { return selection; }
+        }
+    }
+    
     public class Fighter
     {
         string name = "";
@@ -65,7 +120,7 @@ namespace Game1
                 defending = value;
                 if (value == true)
                 {
-                    currentMP = Convert.ToInt32(currentMP + mp * 0.2);
+                    CurrentMP = Convert.ToInt32(CurrentMP + mp * 0.2);
                 }
             }
             get { return defending; }
@@ -242,8 +297,7 @@ namespace Game1
         public Command command;
         public bool[] target = new bool[5] { false, false, false, false, false };
     }
-
-
+    
     public class Battle
     {
         public Fighter[] allies = new Fighter[5];
@@ -259,11 +313,40 @@ namespace Game1
         public int turnNumber = 0;
         Random rng = new Random();
 
-        public Battle(Game1 p)
+        public Fighter tempFighter; //fighter, enemyTeam, selection, atkData
+        public Fighter[] tempEnemyTeam;
+        public bool[] tempSelection;
+        public Attack tempAtkData;
+        public bool endingBattle = false;
+        public string dialog;
+        public BattleState state = BattleState.Regular;
+
+        List<BattleAnimation> animation;
+        public int currentFrameS = 0;
+        public int currentFrameC = 0;
+        public int currentKeyFrame = 0;
+        public int elapsedTime = 0;
+        public bool incrementS = false;
+        public List<BattleAnimation> Animation
+        {
+            set
+            {
+                animation = value;
+                currentFrameS = 0;
+                currentFrameC = 0;
+                currentKeyFrame = 0;
+                elapsedTime = 0;
+                Console.WriteLine("new animation");
+            }
+            get { return animation; }
+        }
+
+        public Battle(Game1 p, string d)
         {
             parent = p;
             battlefield = p.play.battle;
             ui = p.play.battleUI;
+            dialog = d;
         }
         
         public void AddFighter(Character c, Fighter[] team, int slot)
@@ -321,18 +404,18 @@ namespace Game1
             f.Level = c.Level;
             f.ID = c.CharacterID;
             int[] stats = parent.CalculateStats(parent.SearchChar(c.CharacterID),c.Level);
-            f.HP = stats[0];
-            f.MP = stats[1];
-            f.CurrentHP = stats[0];
-            f.CurrentMP = stats[1];
+            f.HP = stats[0] + c.BonusStats[0];
+            f.MP = stats[1] + c.BonusStats[1];
+            f.CurrentHP = stats[0] + c.BonusStats[0];
+            f.CurrentMP = stats[1] + c.BonusStats[1];
             Console.WriteLine("STAT" + stats[0]);
             Console.WriteLine("HP" + f.HP);
             Console.WriteLine("CHP" + f.CurrentHP);
-            f.ATK = stats[2];
-            f.DEF = stats[3];
-            f.MAG = stats[4];
-            f.RES = stats[5];
-            f.SPD = stats[6];
+            f.ATK = stats[2] + c.BonusStats[2];
+            f.DEF = stats[3] + c.BonusStats[3];
+            f.MAG = stats[4] + c.BonusStats[4];
+            f.RES = stats[5] + c.BonusStats[5];
+            f.SPD = stats[6] + c.BonusStats[6];
             int[] skills = parent.GetFirstSkills(c.CharacterID, c.Level);
             f.Skill1 = skills[0];
             f.Skill2 = skills[1];
@@ -410,14 +493,14 @@ namespace Game1
             Fighter[] targets;
             if (team == allies)
             {
-                if (atk.Power > 0)
+                if (atk.Power >= 0)
                     targets = enemies;
                 else
                     targets = allies;
             }
             else
             {
-                if (atk.Power > 0)
+                if (atk.Power >= 0)
                     targets = allies;
                 else
                     targets = enemies;
@@ -512,49 +595,75 @@ namespace Game1
                 //bool valid = false;
                 do
                 {
-                    int skill = rng.Next(1, 3);
+                    int skill = 1;
+                    bool[] mp = new bool[3] { true, true, true };
                     bool[] selection;
                     bool fixedSelection;
-                    Attack atk;
-                    if (skill == 1)
+                    Attack atk = new Attack();
+                    do
                     {
-                        atk = parent.SearchAttack(i.Skill1);
-                        action.command = BattleAction.Command.Attack1;
-                    }
-                    else if (skill == 2)
-                    {
-                        atk = parent.SearchAttack(i.Skill2);
-                        action.command = BattleAction.Command.Attack2;
-                    }
-                    else
-                    {
-                        atk = parent.SearchAttack(i.Skill3);
-                        action.command = BattleAction.Command.Attack3;
-                    }
-                    (selection,fixedSelection) = LoadSelection(atk, enemies);
-                    List<bool[]> selections;
-                    if (!fixedSelection)
-                    {
-                        if (atk.Power > 0)
-                            selections = GetAllPositions(selection, allies);
+                        skill = rng.Next(0, 399);
+                        if (skill%4 == 0)
+                        {
+                            atk = parent.SearchAttack(i.Skill1);
+                            action.command = BattleAction.Command.Attack1;
+                        }
+                        else if (skill%4 == 1)
+                        {
+                            atk = parent.SearchAttack(i.Skill2);
+                            action.command = BattleAction.Command.Attack2;
+                        }
+                        else if (skill % 4 == 2)
+                        {
+                            atk = parent.SearchAttack(i.Skill3);
+                            action.command = BattleAction.Command.Attack3;
+                        }
                         else
-                            selections = GetAllPositions(selection, enemies);
+                        {
+                            if ((float)i.CurrentMP < (float)i.MP * 0.5)
+                            {
+                                action.command = BattleAction.Command.Defend;
+                                break;
+                            }
+                        }
+                        if (atk.MP < i.CurrentMP && skill%4 != 3)
+                        {
+                            atk = new Attack();
+                            mp[skill%4] = false;
+                        }
                     }
-                    else
+                    while (atk.Name == "" || mp == new bool[3] { false, false, false });
+                    if (mp == new bool[3] { false, false, false })
                     {
-                        selections = new List<bool[]>();
-                        selections.Add(selection);
+                        action.command = BattleAction.Command.Defend;
                     }
-                    if (selections.Count > 0)
+                    else if (action.command != BattleAction.Command.Defend)
                     {
-                        bool[] temp = selections[rng.Next(0, selections.Count)];
-                        select[0] = temp[0];
-                        select[1] = temp[1];
-                        select[2] = temp[2];
-                        select[3] = temp[3];
-                        select[4] = temp[4];
-                        //Console.WriteLine("CHOSEN SELECTION:" + select[0] + select[1] + select[2] + select[3] + select[4]);
-                        break;
+                        (selection, fixedSelection) = LoadSelection(atk, enemies);
+                        List<bool[]> selections;
+                        if (!fixedSelection)
+                        {
+                            if (atk.Power > 0)
+                                selections = GetAllPositions(selection, allies);
+                            else
+                                selections = GetAllPositions(selection, enemies);
+                        }
+                        else
+                        {
+                            selections = new List<bool[]>();
+                            selections.Add(selection);
+                        }
+                        if (selections.Count > 0)
+                        {
+                            bool[] temp = selections[rng.Next(0, selections.Count)];
+                            select[0] = temp[0];
+                            select[1] = temp[1];
+                            select[2] = temp[2];
+                            select[3] = temp[3];
+                            select[4] = temp[4];
+                            //Console.WriteLine("CHOSEN SELECTION:" + select[0] + select[1] + select[2] + select[3] + select[4]);
+                            break;
+                        }
                     }
                 }
                 while (true);
@@ -580,7 +689,6 @@ namespace Game1
                     }
                 }
             }
-            
             foreach (Fighter i in enemies)
             {
                 if (i != null)
@@ -626,17 +734,21 @@ namespace Game1
             {
                 case BattleAction.Command.Attack1:
                     atkData = parent.SearchAttack(fighter.Skill1);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Attack2:
                     atkData = parent.SearchAttack(fighter.Skill2);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Attack3:
                     atkData = parent.SearchAttack(fighter.Skill3);
-                    Attack(fighter, enemyTeam, selection, atkData);
+                    ui.Message(fighter.Name + " used " + atkData.Name);
+                    AttackAnimation(fighter, enemyTeam, selection, atkData);
                     break;
                 case BattleAction.Command.Defend:
+                    ui.Message(fighter.Name + " defended");
                     fighter.Defending = true;
                     break;
                 case BattleAction.Command.Move:
@@ -661,7 +773,7 @@ namespace Game1
                 case BattleAction.Command.Flee:
                     if (canFlee)
                     {
-                        EndBattle(true);
+                        EndBattle(BattleResult.None);
                     }
                     break;
             }
@@ -676,6 +788,57 @@ namespace Game1
             }
         }
 
+        public void AttackAnimation(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
+        {
+            state = BattleState.Animation;
+            tempFighter = attacker;
+            tempEnemyTeam = target;
+            tempSelection = selection;
+            tempAtkData = data;
+            Animation = new List<BattleAnimation>();
+            BattleAnimation frame = new BattleAnimation();
+            if (data.Category == "Physical")
+            {
+                frame.CharacterAnimation = CharAnimation.Physical;
+            }
+            else
+                frame.CharacterAnimation = CharAnimation.Ranged;
+            frame.TargetAnimation = CharAnimation.Hit;
+            Animation.Add(frame);
+        }
+
+        public BattleResult CheckVictory()
+        {
+            BattleResult result = BattleResult.None;
+            bool allyDead = true;
+            bool enemyDead = true;
+            foreach (Fighter i in allies)
+            {
+                if (i != null && i.CurrentHP > 0)
+                {
+                    allyDead = false;
+                    break;
+                }
+            }
+            foreach (Fighter i in enemies)
+            {
+                if (i != null && i.CurrentHP > 0)
+                {
+                    enemyDead = false;
+                    break;
+                }
+            }
+            if (enemyDead)
+            {
+                result = BattleResult.PlayerWin;
+            }
+            if (allyDead)
+            {
+                result = BattleResult.EnemyWin;
+            }
+            return result;
+        }
+
         public void Attack(Fighter attacker, Fighter[] target, bool[] selection, Attack data)
         {
             Console.WriteLine("COMMENCE " + attacker.Name + attacker.Level + "'s ATTACK");
@@ -687,37 +850,40 @@ namespace Game1
                 attack = attacker.MAG;
             bool fullPower = true;
             int power = data.Power;
-            if (attacker.CurrentMP < data.MP)
+            if (power > 0)
             {
-                power = power * (attacker.CurrentMP / data.MP);
-                fullPower = false;
-            }
-            attacker.CurrentMP = attacker.CurrentMP - data.MP;
-            for (int i = 0; i < 5; i++)
-            {
-                Fighter defender = target[i];
-                if (selection[i] == true && defender != null)
+                if (attacker.CurrentMP < data.MP)
                 {
-                    Console.WriteLine("TARGET FIND");
-                    int defense = 0;
-                    if (data.Category == "Physical")
-                        defense = defender.DEF;
-                    else if (data.Category == "Magical")
-                        defense = defender.RES;
-                    bool hit = true;
-                    int damage = 0;
-                    if (rng.Next(1, 1000) > data.Accuracy * 10)
-                        hit = false;
-                    if (hit)
+                    power = power * (attacker.CurrentMP / data.MP);
+                    fullPower = false;
+                }
+                attacker.CurrentMP = attacker.CurrentMP - data.MP;
+                for (int i = 0; i < 5; i++)
+                {
+                    Fighter defender = target[i];
+                    if (selection[i] == true && defender != null)
                     {
-                        damage = attack * data.Power / defense;
-                        defender.CurrentHP = defender.CurrentHP - damage;
-                        Console.WriteLine("DAMAGE DEAL");
-                    }
-                    if (fullPower)
-                    {
-                        Effect(attacker, defender, data.Effect1Name, data.Effect1Chance, damage);
-                        Effect(attacker, defender, data.Effect2Name, data.Effect2Chance, damage);
+                        Console.WriteLine("TARGET FIND");
+                        int defense = 0;
+                        if (data.Category == "Physical")
+                            defense = defender.DEF;
+                        else if (data.Category == "Magical")
+                            defense = defender.RES;
+                        bool hit = true;
+                        int damage = 0;
+                        if (rng.Next(1, 1000) > data.Accuracy * 10)
+                            hit = false;
+                        if (hit)
+                        {
+                            damage = attack * data.Power / defense;
+                            defender.CurrentHP = defender.CurrentHP - damage;
+                            Console.WriteLine("DAMAGE DEAL");
+                        }
+                        if (fullPower)
+                        {
+                            Effect(attacker, defender, data.Effect1Name, data.Effect1Chance, damage);
+                            Effect(attacker, defender, data.Effect2Name, data.Effect2Chance, damage);
+                        }
                     }
                 }
             }
@@ -730,7 +896,129 @@ namespace Game1
                 hit = false;
             if (hit)
             {
-
+                if (effect == "atklow")
+                {
+                    defender.ATKSTAGE--;
+                    ui.Message(defender.Name+"'s Attack fell");
+                    Animation = new List<BattleAnimation>();
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Hit;
+                    Animation.Add(frame);
+                }
+                else if (effect == "deflow")
+                {
+                    defender.DEFSTAGE--;
+                    ui.Message(defender.Name + "'s Defense fell");
+                    Animation = new List<BattleAnimation>();
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Hit;
+                    Animation.Add(frame);
+                }
+                else if (effect == "maglow")
+                {
+                    defender.MAGSTAGE--;
+                    ui.Message(defender.Name + "'s Magic fell");
+                    Animation = new List<BattleAnimation>();
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Hit;
+                    Animation.Add(frame);
+                }
+                else if (effect == "reslow")
+                {
+                    defender.RESSTAGE--;
+                    ui.Message(defender.Name + "'s Resist fell");
+                    Animation = new List<BattleAnimation>();
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Hit;
+                    Animation.Add(frame);
+                }
+                else if (effect == "spdlow")
+                {
+                    defender.SPDSTAGE--;
+                    ui.Message(defender.Name + "'s Speed fell");
+                    Animation = new List<BattleAnimation>();
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Hit;
+                    Animation.Add(frame);
+                }
+                else if (effect == "atkup")
+                {
+                    attacker.ATKSTAGE++;
+                    ui.Message(attacker.Name+"'s Attack rose");
+                    Animation = new List<BattleAnimation>();
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.CharacterAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
+                else if (effect == "defup")
+                {
+                    attacker.DEFSTAGE++;
+                    ui.Message(attacker.Name + "'s Defense rose");
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.CharacterAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
+                else if (effect == "magup")
+                {
+                    attacker.MAGSTAGE++;
+                    ui.Message(attacker.Name + "'s Magic rose");
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.CharacterAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
+                else if (effect == "resup")
+                {
+                    attacker.RESSTAGE++;
+                    ui.Message(attacker.Name + "'s Resistance rose");
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.CharacterAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
+                else if (effect == "atkup")
+                {
+                    attacker.SPDSTAGE++;
+                    ui.Message(attacker.Name + "'s Speed rose");
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.CharacterAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
+                else if (effect == "heal")
+                {
+                    defender.CurrentHP += (int)((float)defender.HP * 0.25);
+                    ui.Message(defender.Name + " was healed");
+                    for (int i = 0; i < 1; i++)
+                    {
+                        BattleAnimation frame = new BattleAnimation();
+                        frame.Selection = tempSelection;
+                        frame.TargetAnimation = CharAnimation.Happy;
+                        Animation.Add(frame);
+                    }
+                }
             }
         }
 
@@ -767,13 +1055,8 @@ namespace Game1
             return team;
         }
 
-        public void EndBattle(bool fled)
+        public void EndBattle(BattleResult result)
         {
-            parent.State = Game1.GameState.Playing;
-            if (!fled)
-            {
-
-            }
             for (int i = 0; i < 5; i++)
             {
                 Fighter fighter = allies[i];
@@ -783,10 +1066,77 @@ namespace Game1
                     fighter.Character.CurrentMP = fighter.CurrentMP;
                 }
             }
+            if (result == BattleResult.PlayerWin)
+            {
+                int xpGain = 0;
+                foreach (Fighter i in enemies)
+                {
+                    if (i != null)
+                    {
+                        CharData data = parent.SearchChar(i.ID);
+                        xpGain = xpGain + (data.XP * i.Level / 10);
+                    }
+                }
+                foreach (Fighter i in allies)
+                {
+                    if (i != null && i.Character != null)
+                    {
+                        if (i.CurrentHP > 0)
+                            i.Character.XP = i.Character.XP + xpGain;
+                        else
+                            i.Character.XP = i.Character.XP + xpGain/4;
+                        if (i.Character.Level > i.Level)
+                        {
+                            int[] stats = parent.CalculateStats(i.Character);
+                            i.Character.CurrentHP = stats[0];
+                            i.Character.CurrentMP = stats[1];
+                        }
+                    }
+                }
+                ui.Message("You won the battle");
+                tempEnemyTeam = allies;
+            }
+            else if (result == BattleResult.EnemyWin)
+            {
+                ui.Message("You lost the battle");
+                tempEnemyTeam = enemies;
+            }
+            if (result == BattleResult.None)
+            {
+                ResumeEndBattle();
+            }
+            else
+            {
+                state = BattleState.Animation;
+                tempFighter = null;
+                tempSelection = new bool[5] { true, true, true, true, true };
+                tempAtkData = null;
+                endingBattle = true;
+                Animation = new List<BattleAnimation>();
+                for (int i = 0; i < 3; i++)
+                {
+                    BattleAnimation frame = new BattleAnimation();
+                    frame.Selection = tempSelection;
+                    frame.TargetAnimation = CharAnimation.Happy;
+                    Animation.Add(frame);
+                }
+            }
+        }
+
+        public void ResumeEndBattle()
+        {
+            ui.Message("");
             parent.play.Remove(parent.play.battle);
             parent.play.Remove(parent.play.battleUI);
             parent.play.Add(parent.play.mapWidget);
             parent.pause = false;
+            if (dialog == null)
+                parent.State = Game1.GameState.Playing;
+            else
+            {
+                parent.State = Game1.GameState.Dialog;
+                parent.newDialogName = dialog;
+            }
         }
     }
 }

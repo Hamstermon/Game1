@@ -23,7 +23,15 @@ namespace Game1
         int xp;
         public int XP
         {
-            set { xp = value; }
+            set
+            {
+                xp = value;
+                while (xp >= level * (level + 4))
+                {
+                    xp -= level * (level + 4);
+                    level += 1;
+                }
+            }
             get { return xp; }
         }
         int currentHP;
@@ -61,16 +69,6 @@ namespace Game1
         {
             set { available = value; }
             get { return available; }
-        }
-        
-        public void GainXP(int xpGained)
-        {
-            xp += xpGained;
-            while (xp >= level * (level + 4))
-            {
-                xp -= level * (level + 4);
-                level += 1;
-            }
         }
     }
 }

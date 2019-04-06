@@ -34,10 +34,11 @@ namespace Game1
             MainMenu,
             Overworld,
             Playing,
+            Dialog,
             Battle,
             EndGame
         }
-        private GameState state = GameState.Playing;
+        GameState state = GameState.MainMenu;
         public GameState State
         {
             get { return state; }
@@ -50,6 +51,7 @@ namespace Game1
                     case GameState.Overworld:
                     case GameState.Battle:
                     case GameState.EndGame:
+                    case GameState.Dialog:
                         pause = true;
                         break;
                     case GameState.Playing:
@@ -73,12 +75,18 @@ namespace Game1
         public bool pause = false;
         public Fighter currentFighter;
         Random rng = new Random();
-        
+
+        Dialog currentDialog;
+        public string npcName;
+        public string newDialogName;
+        public string dialogEvent = "";
+                
         public List<Attack> attacks = new List<Attack>();
         public List<CharData> characters = new List<CharData>();
         public List<MapData> maps = new List<MapData>();
         public List<MapChar> mapChar = new List<MapChar>();
         public List<CharAttack> charAtk = new List<CharAttack>();
+        public List<Dialog> dialogs = new List<Dialog>();
         static JsonSerializer serializer = new JsonSerializer();
 
         public Game1()
@@ -89,7 +97,6 @@ namespace Game1
             graphics.ApplyChanges();
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            CreateNewGame(0);
         }
 
         /// <summary>
@@ -98,6 +105,27 @@ namespace Game1
         /// related content.  Calling base.Initialize will enumerate through any components
         /// and initialize them as well.
         /// </summary>
+        public enum Type
+        {
+            Normal,
+            Fire,
+            Water,
+            Electric,
+            Grass,
+            Ice,
+            Fighting,
+            Poison,
+            Ground,
+            Flying,
+            Psychic,
+            Bug,
+            Rock,
+            Ghost,
+            Dragon,
+            Dark,
+            Steel,
+            Light
+        }
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
@@ -105,6 +133,10 @@ namespace Game1
             var styleSystem = uiManager.UIStyle;
             var styles = styleSystem.LoadStyles("Content/style.xml", "UI/Metro", GraphicsDevice);
             styleSystem.StyleResolver.StyleRules.AddRange(styles);
+            int[,] matchup = new int[18, 18];
+            for (int i = 0; i< 18; i++)
+            {
+            }
 
             main = new MainMenu(styleSystem, this);
             menu = new OverWorldMenu(styleSystem, this);
@@ -135,7 +167,13 @@ namespace Game1
             {
                 charAtk = serializer.Deserialize<List<CharAttack>>(reader);
             }
+            using (StreamReader sr = new StreamReader("Content/dialogs.txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                dialogs = serializer.Deserialize<List<Dialog>>(reader);
+            }
 
+            //CreateNewGame(0);
             base.Initialize();
         }
 
@@ -149,10 +187,7 @@ namespace Game1
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             level = new Level();
-            mapID = 0;
-            play.mapWidget.Init("testMap1.tmx", this, graphics);
             
-            level.Init(this, 50, play.mapWidget.CurrentMap);
             pixel = new Texture2D(GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             pixel.SetData(new[] { Color.White });
 
@@ -186,7 +221,7 @@ namespace Game1
                 elapsedTime += (int)gameTime.ElapsedGameTime.TotalMilliseconds;
                 if (elapsedTime > 10000)
                 {
-                    level.SpawnCycle();
+                    //level.SpawnCycle();
                     elapsedTime = 0;
                 }
             }
@@ -201,10 +236,11 @@ namespace Game1
                     break;
                 case GameState.Playing:
                 case GameState.Overworld:
+                case GameState.Dialog:
                     UpdateOverworld(gameTime);
                     break;
                 case GameState.Battle:
-                    UpdateBattle();
+                    UpdateBattle(gameTime);
                     break;
                 case GameState.EndGame:
                     UpdateEndGame();
@@ -276,6 +312,19 @@ namespace Game1
             }
             return charatk;
         }
+        public Dialog SearchDialog(string name)
+        {
+            Dialog dialog = new Dialog();
+            foreach (Dialog i in dialogs)
+            {
+                if (i.Name == name)
+                {
+                    dialog = i;
+                    break;
+                }
+            }
+            return dialog;
+        }
 
         public int FindElement(string tableName, int id)
         {
@@ -343,6 +392,19 @@ namespace Game1
             return realID;
         }
 
+        public int FindEvent(string name)
+        {
+            int temp = -1;
+            foreach (Event e in playerSaveData.Events)
+            {
+                if (e.Name == name)
+                {
+                    temp = e.Value;
+                }
+            }
+            return temp;
+        }
+
         public void Wait(int milliseconds)
         {
             Stopwatch timer = new Stopwatch();
@@ -373,7 +435,6 @@ namespace Game1
             stats[4] = (int)(10.0 + ((double)data.MAG * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
             stats[5] = (int)(10.0 + ((double)data.RES * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
             stats[6] = (int)(10.0 + ((double)data.SPD * (2.0 + (2.0 / 5.0) * (double)level)) / 40.0);
-            Console.WriteLine("hp" + stats[0]);
             return stats;
         }
 
@@ -394,6 +455,8 @@ namespace Game1
                     }
                 }
             }
+            if (skills[0] == -1)
+                skills[0] = 0;
             return skills;
         }
 
@@ -419,73 +482,112 @@ namespace Game1
             return c;
         }
 
+        public void LoadBattle(List<OverworldEnemy> enemies, int[] positions, string dialog)
+        {
+            if (play.mapWidget.Parent == play)
+            {
+                state = GameState.Battle;
+                battle = new Battle(this,dialog);
+                string battlefieldName = SearchMap(mapID).BattleFileName;
+                play.battle.Init(battlefieldName + ".tmx", this, graphics);
+                play.Add(play.battle);
+                play.Add(play.battleUI);
+                play.Remove(play.mapWidget);
+                //play.battle.Visibility = Visibility.Visible;
+                //play.battleUI.Visibility = Visibility.Visible;
+                //play.mapWidget.Visibility = Visibility.Hidden;
+                for (int i = 0; i < 5; i++)
+                {
+                    if (playerSaveData.Party[i] != -1)
+                    {
+                        Character c = playerSaveData.CharacterList[playerSaveData.Party[i]];
+                        battle.AddFighter(c, battle.allies, i);
+                        Console.WriteLine("add ally");
+                    }
+                }
+                bool[] occupied = new bool[5] { false, false, false, false, false };
+                if (positions == null)
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+
+                        if (i < enemies.Count)
+                        {
+                            OverworldEnemy e = enemies[i];
+                            int slot = 0;
+                            do
+                            {
+                                slot = rng.Next(0, 4);
+                            }
+                            while (occupied[slot] == true);
+                            occupied[slot] = true;
+                            battle.AddFighter(e, battle.enemies, slot);
+                            Console.WriteLine("add enemy");
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (positions[i] != -1)
+                        {
+                            battle.AddFighter(enemies[positions[i]], battle.enemies, i);
+                        }
+                    }
+                }
+                Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
+                play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
+                play.battleUI.RefreshFighters();
+                battle.TurnCycle();
+            }
+        }
+
         public void CreateNewGame(int saveID)
         {
             saveFileID = saveID;
             state = GameState.Playing;
-            Character c = CreateCharacter(0, 5, -1, -1, 0, 0, 0, true);
+            Character c = CreateCharacter(3, 5, -1, -1, 0, 0, 0, true);
             playerSaveData.CharacterList.Add(c);
             int index = playerSaveData.CharacterList.IndexOf(c);
             playerSaveData.Party = new int[5] { -1, -1, index, -1, -1 };
-        }
 
-        public void LoadBattle(List<OverworldEnemy> enemies)
-        {
-            state = GameState.Battle;
-            battle = new Battle(this);
-            string battlefieldName = SearchMap(mapID).BattleFileName;
-            play.battle.Init(battlefieldName+".tmx", this, graphics);
-            play.Add(play.battle);
-            play.Add(play.battleUI);
-            play.Remove(play.mapWidget);
-            //play.battle.Visibility = Visibility.Visible;
-            //play.battleUI.Visibility = Visibility.Visible;
-            //play.mapWidget.Visibility = Visibility.Hidden;
-            for (int i = 0; i < 5; i++)
-            {
-                if (playerSaveData.Party[i] != -1)
-                {
-                    Character c = playerSaveData.CharacterList[playerSaveData.Party[i]];
-                    battle.AddFighter(c, battle.allies, i);
-                    Console.WriteLine("add ally");
-                }
-            }
-            bool[] occupied = new bool[5] { false, false, false, false, false };
-            for (int i = 0; i < 5; i++)
-            {
-               
-                if (i < enemies.Count)
-                {
-                    OverworldEnemy e = enemies[i];
-                    int slot = 0;
-                    do
-                    {
-                        slot = rng.Next(0, 4);
-                    }
-                    while (occupied[slot] == true);
-                    occupied[slot] = true;
-                    battle.AddFighter(e, battle.enemies, slot);
-                    Console.WriteLine("add enemy");
-                }
-            }
-            Vector2 viewportPosition = new Vector2(play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].X, play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"].Y);
-            play.battle.CameraObject = play.battle.CurrentMap.ObjectGroups["spots"].Objects["field"];
-            play.battleUI.RefreshFighters();
-            battle.TurnCycle();
+            mapID = 0;
+            MapData mapData = SearchMap(mapID);
+            play.mapWidget.Init(mapData.MapFileName+".tmx", this, graphics);
+            level.Init(this, 50, play.mapWidget.CurrentMap,-1,-1);
         }
 
         public void LoadGame(int saveID)
         {
             saveFileID = saveID;
+            using (StreamReader sr = new StreamReader("save"+saveFileID+".txt"))
+            using (JsonReader reader = new JsonTextReader(sr))
+            {
+                playerSaveData = serializer.Deserialize<PlayerSaveData>(reader);
+            }
+            
+            mapID = playerSaveData.MapID;
+            MapData mapData = SearchMap(mapID);
+            play.mapWidget.Init(mapData.MapFileName + ".tmx", this, graphics);
+            level.Init(this, 50, play.mapWidget.CurrentMap, playerSaveData.Position[0], playerSaveData.Position[1]);
+            state = GameState.Playing;
+        }
+
+        public void SaveGame()
+        {
+            playerSaveData.Position = new int[2] { level.player.X, level.player.Y };
+            playerSaveData.MapID = mapID;
+            using (StreamWriter sw = new StreamWriter("save"+saveFileID+".txt"))
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                serializer.Serialize(writer,playerSaveData);
+            }
+            Console.WriteLine("saved");
         }
 
         public Texture2D GetCurrentFrame(OverworldChar charData, Squared.Tiled.Object character, int xOffset)
         {
-            //string y;
-            //character.Properties.TryGetValue("id", out y);
-            //int yOffset = Convert.ToInt32(y);
-            //string spriteSheetName;
-            //character.Properties.TryGetValue("spritesheet", out spriteSheetName);
             string spriteSheetName = charData.SpriteSheet;
             int yOffset = charData.SpriteIndex;
             int frameWidth = 32;
@@ -524,11 +626,9 @@ namespace Game1
 
         public Texture2D GetCurrentFrame(Squared.Tiled.Object character, int xOffset)
         {
-            string y;
-            character.Properties.TryGetValue("id", out y);
+            string y = character.Properties["id"];
             int yOffset = Convert.ToInt32(y);
-            string spriteSheetName;
-            character.Properties.TryGetValue("spritesheet", out spriteSheetName);
+            string spriteSheetName = character.Properties["spritesheet"];
             int frameWidth = 32;
             int frameHeight = 32;
             if (spriteSheetName == "characterSpritesheetLarge")
@@ -596,6 +696,7 @@ namespace Game1
                 {
                     Wait(1000);
                     play.TransitionVisible(false);
+                    pause = false;
                 }
                 uiManager.Root.Content = play;
                 bool moving = false;
@@ -626,9 +727,99 @@ namespace Game1
                         State = GameState.Overworld;
                         Console.WriteLine("Show OverWorld");
                     }
+                    if (Keyboard.GetState().IsKeyDown(Keys.Z))
+                    {
+                        level.Interact();
+                    }
                 }
-                if (!moving)
+                if (moving)
+                {
+                    foreach (OverworldEnemy enemy in level.enemies)
+                    {
+                        bool fight = level.CheckCollisionBattle(enemy);
+                        if (fight)
+                        {
+                            pause = true;
+                            List<OverworldEnemy> fighters = level.GetEnemies(enemy.Character.X, enemy.Character.Y, 256, true);
+                            foreach (OverworldEnemy e in fighters)
+                            {
+                                GetCurrentFrame(e, e.Character, 29);
+                            }
+                            LoadBattle(fighters,null,null);
+                        }
+                    }
+                    level.SpawnCycle();
+                }
+                else
                     player.CurrentFrame = 0;
+            }
+            else if (State == GameState.Dialog)
+            {
+                if (play.dialogUI.Parent != play)
+                    play.Add(play.dialogUI);
+                if (dialogEvent != "")
+                {
+                    switch (npcName)
+                    {
+                        case "test":
+                            switch (dialogEvent)
+                            {
+                                case "heal":
+                                    foreach (Character i in playerSaveData.CharacterList)
+                                    {
+                                        int[] stats = CalculateStats(i);
+                                        i.CurrentHP = stats[0];
+                                        i.CurrentMP = stats[1];
+                                    }
+                                    break;
+                            }
+                            break;
+                        case "bubbles":
+                            switch (dialogEvent)
+                            {
+                                case "befriend":
+                                    Character c = CreateCharacter(2, 5, -1, -1, 0, 0, 0, true);
+                                    playerSaveData.CharacterList.Add(c);
+                                    int index = playerSaveData.CharacterList.IndexOf(c);
+                                    int slot = -1;
+                                    int count = 0;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (playerSaveData.Party[i] == -1 && slot == -1)
+                                            slot = i;
+                                        if (playerSaveData.Party[i] != -1)
+                                            count++;
+                                    }
+                                    if (count < 3)
+                                        playerSaveData.Party[slot] = index;
+                                    Event e = new Event();
+                                    e.Name = "bubblesBefriend";
+                                    e.Value = 0;
+                                    playerSaveData.Events.Add(e);
+                                    level.objects.Objects.Remove("npc2");
+                                    break;
+                            }
+                            break;
+                    }
+                    dialogEvent = "";
+                }
+                if (newDialogName != null)
+                {
+                    currentDialog = SearchDialog(newDialogName);
+                    if (currentDialog.Name != null)
+                    {
+                        play.dialogUI.box.Name = currentDialog.CharName;
+                        play.dialogUI.box.Text = currentDialog.Text;
+                        play.dialogUI.options.NewOptions(currentDialog);
+                    }
+                    else
+                    {
+                        if (play.dialogUI.Parent == play)
+                            play.Remove(play.dialogUI);
+                        State = GameState.Playing;
+                    }
+                    newDialogName = null;
+                }
             }
 
             //update level
@@ -640,59 +831,145 @@ namespace Game1
         }
 
         bool battleKeyDown = false;
-        public void UpdateBattle() 
+        public void UpdateBattle(GameTime gameTime) 
         {
-            currentFighter = battle.order[battle.turnNumber];
-            BattleAction action;
-            bool playerControlled = false;
-            if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
+            if (battle.state == BattleState.Regular)
             {
-                battleKeyDown = true;
-                play.battleUI.commands.MoveSelection(true);
-            }
-            else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
-            {
-                battleKeyDown = true;
-                play.battleUI.commands.MoveSelection(false);
-            }
-            else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
-            {
-                battleKeyDown = false;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
-            {
-                level.MoveCharacter(player, level.player, 2);
-            }
-            if (battle.GetTeam(currentFighter) == battle.allies)
-                playerControlled = true;
-            if (playerControlled)
-            {
-                if (play.battleUI.commands.Parent != play.battleUI)
+                currentFighter = battle.order[battle.turnNumber];
+                BattleAction action;
+                bool playerControlled = false;
+                if (Keyboard.GetState().IsKeyDown(Keys.Up) && battleKeyDown == false)
                 {
-                    play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
-                    play.battleUI.commands.ResetVisibility();
-                    Attack atk1 = SearchAttack(currentFighter.Skill1);
-                    Attack atk2 = SearchAttack(currentFighter.Skill2);
-                    Attack atk3 = SearchAttack(currentFighter.Skill3);
-                    play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
+                    battleKeyDown = true;
+                    play.battleUI.commands.MoveSelection(true);
                 }
-                //play.battleUI.commands.Visibility = Visibility.Visible;
-                if (battle.playerAction != null)
+                else if (Keyboard.GetState().IsKeyDown(Keys.Down) && battleKeyDown == false)
                 {
-                    Console.WriteLine("player turn");
-                    battle.Turn(currentFighter, battle.playerAction);
-                    play.battleUI.Remove(play.battleUI.commands);
-                    //play.battleUI.commands.Visibility = Visibility.Hidden;
-                    battle.playerAction = null;
+                    battleKeyDown = true;
+                    play.battleUI.commands.MoveSelection(false);
+                }
+                else if (!(Keyboard.GetState().IsKeyDown(Keys.Up) || (Keyboard.GetState().IsKeyDown(Keys.Down))))
+                {
+                    battleKeyDown = false;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.Down))
+                {
+                    level.MoveCharacter(player, level.player, 2);
+                }
+                if (battle.GetTeam(currentFighter) == battle.allies)
+                    playerControlled = true;
+                if (playerControlled)
+                {
+                    if (play.battleUI.commands.Parent != play.battleUI)
+                    {
+                        play.battleUI.Add(play.battleUI.commands, DockPanelConstraint.Left);
+                        play.battleUI.commands.ResetVisibility();
+                        Attack atk1 = SearchAttack(currentFighter.Skill1);
+                        Attack atk2 = SearchAttack(currentFighter.Skill2);
+                        Attack atk3 = SearchAttack(currentFighter.Skill3);
+                        play.battleUI.commands.UpdateAttacks(atk1, atk2, atk3);
+                    }
+                    //play.battleUI.commands.Visibility = Visibility.Visible;
+                    if (battle.playerAction != null)
+                    {
+                        Console.WriteLine("player turn");
+                        battle.Turn(currentFighter, battle.playerAction);
+                        play.battleUI.Remove(play.battleUI.commands);
+                        //play.battleUI.commands.Visibility = Visibility.Hidden;
+                        battle.playerAction = null;
+                    }
+                }
+                else
+                {
+                    action = battle.Ai(currentFighter);
+                    Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
+                    battle.Turn(currentFighter, action);
+                    Console.WriteLine("EnemyTurn");
+                }
+                BattleResult battleOutcome = battle.CheckVictory();
+                if (battleOutcome != BattleResult.None)
+                {
+                    Console.WriteLine("dieded" + battleOutcome.ToString());
+                    battle.EndBattle(battleOutcome);
                 }
             }
-            else
+            else if (battle.state == BattleState.Animation)
             {
-                action = battle.Ai(currentFighter);
-                Console.WriteLine("CHOSEN TARGET:" + action.target[0] + action.target[1] + action.target[2] + action.target[3] + action.target[4]);
-                battle.Turn(currentFighter, action);
-                Console.WriteLine("EnemyTurn");
+                battle.elapsedTime += gameTime.ElapsedGameTime.Milliseconds;
+                int xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].CharacterAnimation);
+                if (battle.tempFighter != null)
+                    battle.tempFighter.Char.Texture = GetCurrentFrame(battle.tempFighter.Char, xOffset);
+                xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].TargetAnimation);
+                for (int i = 0; i < 5; i++)
+                {
+                    if (battle.tempEnemyTeam[i] != null && battle.Animation[battle.currentKeyFrame].Selection[i] == true)
+                    {
+                        battle.tempEnemyTeam[i].Char.Texture = GetCurrentFrame(battle.tempEnemyTeam[i].Char, xOffset);
+                    }
+                }
+                if (battle.elapsedTime > 200 && battle.incrementS == false)
+                {
+                    battle.currentFrameS++;
+                    battle.incrementS = true;
+                }
+                if (battle.elapsedTime > 400)
+                {
+                    battle.elapsedTime = 0;
+                    battle.currentFrameS++;
+                    battle.currentFrameC++;
+                }
+                if (battle.currentFrameC >= 2)
+                {
+                    battle.elapsedTime = 0;
+                    battle.currentFrameS = 0;
+                    battle.currentFrameC = 0;
+                    battle.currentKeyFrame++;
+                    if (battle.currentKeyFrame >= battle.Animation.Count)
+                    {
+                        battle.state = BattleState.Regular;
+                        if (battle.endingBattle == false)
+                            battle.Attack(battle.tempFighter, battle.tempEnemyTeam, battle.tempSelection, battle.tempAtkData);
+                        else
+                            battle.ResumeEndBattle();
+                        battle.UpdateFighters();
+                        play.battleUI.Message("");
+                    }
+                }
             }
+        }
+
+        public int GetXOffsetOfAnimation(CharAnimation animation)
+        {
+            int xOffset = 0;
+            if (animation == CharAnimation.None)
+            {
+                xOffset = 12;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 4;
+            }
+            else if (animation == CharAnimation.Physical)
+            {
+                xOffset = 16 + battle.currentFrameC;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 22 + battle.currentFrameC;
+            }
+            else if (animation == CharAnimation.Ranged)
+            {
+                xOffset = 18 + battle.currentFrameC;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 24 + battle.currentFrameC;
+            }
+            else if (animation == CharAnimation.Hit)
+            {
+                xOffset = 20;
+                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                    xOffset = 26;
+            }
+            else if (animation == CharAnimation.Happy)
+            {
+                xOffset = 28 + battle.currentFrameC;
+            }
+            return xOffset;
         }
 
         public void UpdateEndGame()
@@ -722,6 +999,7 @@ namespace Game1
                     DrawEndGame();
                     break;
                 case GameState.Playing:
+                case GameState.Dialog:
                     break;
             }
 
