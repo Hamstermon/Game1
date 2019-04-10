@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="4">
+<map version="1.0" tiledversion="2017.06.27" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" nextobjectid="5">
  <tileset firstgid="1" name="Tileset" tilewidth="32" tileheight="32" tilecount="400" columns="20">
   <image source="Tileset.png" trans="ff00ff" width="640" height="640"/>
  </tileset>
- <layer id="15" name="2floor" width="50" height="50">
+ <layer name="2floor" width="50" height="50">
   <data encoding="csv">
 51,51,51,51,51,51,51,51,52,48,48,48,48,48,48,48,48,48,48,48,49,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 51,51,51,51,51,51,51,51,52,48,48,48,48,48,48,48,48,48,48,48,49,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -57,7 +57,7 @@
 51,51,51,51,51,51,51,51,52,48,48,48,48,48,48,48,48,48,48,48,49,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 </data>
  </layer>
- <layer id="16" name="3raisedfloor" width="50" height="50">
+ <layer name="3raisedfloor" width="50" height="50">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,301,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,301,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,
@@ -111,7 +111,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,301,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302
 </data>
  </layer>
- <layer id="17" name="4raisederfloor" width="50" height="50">
+ <layer name="4raisederfloor" width="50" height="50">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -165,8 +165,17 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <objectgroup id="7" name="5objects"/>
- <objectgroup id="8" name="teleport">
+ <objectgroup name="5objects">
+  <object id="4" name="npc1" type="NPC" x="864" y="288" width="32" height="32">
+   <properties>
+    <property name="direction" value="2"/>
+    <property name="id" value="4"/>
+    <property name="npc" value="bally"/>
+    <property name="spritesheet" value="characterSpritesheet"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup name="teleport">
   <object id="1" name="tp1" x="1344" y="704" width="32" height="96">
    <properties>
     <property name="destination" value="tp3"/>
@@ -174,10 +183,10 @@
    </properties>
   </object>
  </objectgroup>
- <objectgroup id="9" name="teleportDestination">
+ <objectgroup name="teleportDestination">
   <object id="3" name="tp1" x="1280" y="736" width="32" height="32"/>
  </objectgroup>
- <layer id="18" name="6abovefloor" width="50" height="50">
+ <layer name="6abovefloor" width="50" height="50">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -231,7 +240,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="19" name="1collision" width="50" height="50" opacity="0">
+ <layer name="1collision" width="50" height="50" opacity="0">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Squared.Tiled;
 using Steropes.UI.Components;
-using System;
 
 namespace Game1
 {
@@ -325,6 +324,7 @@ namespace Game1
         public bool[] tempSelection;
         public Attack tempAtkData;
         public string dialog;
+        public string npc;
         public BattleState state = BattleState.Regular;
         public PostAnimation postAnimation = PostAnimation.Done;
 
@@ -354,6 +354,7 @@ namespace Game1
             battlefield = p.play.battle;
             ui = p.play.battleUI;
             dialog = d;
+            npc = p.npcName;
         }
         
         public void AddFighter(Character c, Fighter[] team, int slot)
@@ -1062,14 +1063,17 @@ namespace Game1
                 }
                 else if (effect == "heal")
                 {
-                    defender.CurrentHP += (int)((float)defender.HP * 0.25);
-                    ui.Message(defender.Name + " was healed");
-                    for (int i = 0; i < 1; i++)
+                    if (defender.CurrentHP > 0)
                     {
-                        BattleAnimation frame = new BattleAnimation();
-                        frame.Selection = tempSelection;
-                        frame.TargetAnimation = CharAnimation.Happy;
-                        Animation.Add(frame);
+                        defender.CurrentHP += (int)((float)defender.HP * 0.25);
+                        ui.Message(defender.Name + " was healed");
+                        for (int i = 0; i < 1; i++)
+                        {
+                            BattleAnimation frame = new BattleAnimation();
+                            frame.Selection = tempSelection;
+                            frame.TargetAnimation = CharAnimation.Happy;
+                            Animation.Add(frame);
+                        }
                     }
                 }
             }
@@ -1185,12 +1189,16 @@ namespace Game1
             parent.play.Remove(parent.play.battle);
             parent.play.Remove(parent.play.battleUI);
             parent.play.Add(parent.play.mapWidget);
-            parent.pause = false;
             if (dialog == null)
+            {
+                parent.pause = false;
                 parent.State = Game1.GameState.Playing;
+            }
             else
             {
                 parent.State = Game1.GameState.Dialog;
+                parent.npcName = npc;
+                parent.dialogEvent = "";
                 parent.newDialogName = dialog;
             }
         }

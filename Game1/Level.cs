@@ -396,6 +396,9 @@ namespace Game1
                         case "bubbles":
                             game.newDialogName = "bubbles1";
                             break;
+                        case "bally":
+                            game.newDialogName = "bally1";
+                            break;
                         default: //if the npc has no logic return to the playing state
                             game.State = Game1.GameState.Playing;
                             break;
@@ -414,6 +417,12 @@ namespace Game1
                     break;
                 case "bubbles":
                     if (game.FindEvent("bubblesBefriend") >= 0)
+                    {
+                        visible = false;
+                    }
+                    break;
+                case "bally":
+                    if (game.FindEvent("ballyBefriend") >= 0)
                     {
                         visible = false;
                     }
@@ -488,6 +497,7 @@ namespace Game1
             enemy.SpriteIndex = data.SpriteIndex;
             enemy.CharacterID = data.CharID;
             enemy.Level = level;
+            enemy.Direction = rng.Next(0, 3);
             totalEnemyCount++;
             return enemy;
         }

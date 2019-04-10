@@ -801,14 +801,52 @@ namespace Game1
                                     break;
                             }
                             break;
+                        case "bally":
+                            switch (dialogEvent)
+                            {
+                                case "befriend":
+                                    Character c = CreateCharacter(4, 7, -1, -1, 0, 9, 12, true);
+                                    playerSaveData.CharacterList.Add(c);
+                                    int index = playerSaveData.CharacterList.IndexOf(c);
+                                    int slot = -1;
+                                    int count = 0;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (playerSaveData.Party[i] == -1 && slot == -1)
+                                            slot = i;
+                                        if (playerSaveData.Party[i] != -1)
+                                            count++;
+                                    }
+                                    if (count < 3)
+                                        playerSaveData.Party[slot] = index;
+                                    Event e = new Event();
+                                    e.Name = "ballyBefriend";
+                                    e.Value = 0;
+                                    playerSaveData.Events.Add(e);
+                                    level.objects.Objects.Remove("npc1");
+                                    break;
+                                case "fight":
+                                    List<OverworldEnemy> team = new List<OverworldEnemy>();
+                                    OverworldEnemy f1 = new OverworldEnemy();
+                                    f1.CharacterID = 4;
+                                    f1.Level = 7;
+                                    f1.BonusStats = new int[7] { 100, 100, 0, 0, 0, 0, 0 };
+                                    team.Add(f1);
+                                    int[] positions = new int[5] { -1, -1, 0, -1, -1 };
+                                    LoadBattle(team,positions,"bally2");
+                                    break;
+                            }
+                            break;
                     }
                     dialogEvent = "";
                 }
-                if (newDialogName != null)
+                if (State == GameState.Dialog && newDialogName != null)
                 {
+                    Console.WriteLine("loading a dliagog");
                     currentDialog = SearchDialog(newDialogName);
                     if (currentDialog.Name != null)
                     {
+                        Console.WriteLine("success");
                         play.dialogUI.box.Name = currentDialog.CharName;
                         play.dialogUI.box.Text = currentDialog.Text;
                         play.dialogUI.options.NewOptions(currentDialog);
@@ -839,15 +877,24 @@ namespace Game1
             if (battle.state == BattleState.Animation)
             {
                 battle.elapsedTime += gameTime.ElapsedGameTime.Milliseconds;
-                int xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].CharacterAnimation);
-                if (battle.tempFighter != null)
-                    battle.tempFighter.Char.Texture = GetCurrentFrame(battle.tempFighter.Char, xOffset);
-                xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].TargetAnimation);
-                for (int i = 0; i < 5; i++)
+                if (battle.currentKeyFrame < battle.Animation.Count)
                 {
-                    if (battle.tempEnemyTeam[i] != null && battle.Animation[battle.currentKeyFrame].Selection[i] == true)
+                    bool userIsEnemy = false;
+                    bool targIsEnemy = false;
+                    if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                        userIsEnemy = true;
+                    if (battle.tempEnemyTeam == battle.enemies)
+                        targIsEnemy = true;
+                    int xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].CharacterAnimation, userIsEnemy);
+                    if (battle.tempFighter != null)
+                        battle.tempFighter.Char.Texture = GetCurrentFrame(battle.tempFighter.Char, xOffset);
+                    xOffset = GetXOffsetOfAnimation(battle.Animation[battle.currentKeyFrame].TargetAnimation, targIsEnemy);
+                    for (int i = 0; i < 5; i++)
                     {
-                        battle.tempEnemyTeam[i].Char.Texture = GetCurrentFrame(battle.tempEnemyTeam[i].Char, xOffset);
+                        if (battle.tempEnemyTeam[i] != null && battle.Animation[battle.currentKeyFrame].Selection[i] == true)
+                        {
+                            battle.tempEnemyTeam[i].Char.Texture = GetCurrentFrame(battle.tempEnemyTeam[i].Char, xOffset);
+                        }
                     }
                 }
                 if (battle.elapsedTime > 200 && battle.incrementS == false)
@@ -962,31 +1009,31 @@ namespace Game1
             }
         }
 
-        public int GetXOffsetOfAnimation(CharAnimation animation)
+        public int GetXOffsetOfAnimation(CharAnimation animation, bool enemy)
         {
             int xOffset = 0;
             if (animation == CharAnimation.None)
             {
                 xOffset = 12;
-                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                if (enemy)
                     xOffset = 4;
             }
             else if (animation == CharAnimation.Physical)
             {
                 xOffset = 16 + battle.currentFrameC;
-                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                if (enemy)
                     xOffset = 22 + battle.currentFrameC;
             }
             else if (animation == CharAnimation.Ranged)
             {
                 xOffset = 18 + battle.currentFrameC;
-                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                if (enemy)
                     xOffset = 24 + battle.currentFrameC;
             }
             else if (animation == CharAnimation.Hit)
             {
                 xOffset = 20;
-                if (battle.GetTeam(battle.tempFighter) == battle.enemies)
+                if (enemy)
                     xOffset = 26;
             }
             else if (animation == CharAnimation.Happy)
