@@ -145,6 +145,7 @@
     <Content Include="Content\testMap2.tmx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="Content\cave2.tmx" />
     <None Include="Content\caveBattle.tmx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

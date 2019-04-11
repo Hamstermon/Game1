@@ -221,6 +221,10 @@ namespace Game1
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            if (State != GameState.Dialog && play.dialogUI.Parent == play)
+            {
+                play.Remove(play.dialogUI);
+            }
             switch (state)
             {
                 case GameState.MainMenu:
@@ -757,7 +761,10 @@ namespace Game1
             else if (State == GameState.Dialog)
             {
                 if (play.dialogUI.Parent != play)
+                {
+                    Console.WriteLine("reveal dialofg ");
                     play.Add(play.dialogUI);
+                }
                 if (dialogEvent != "")
                 {
                     switch (npcName)
@@ -830,10 +837,78 @@ namespace Game1
                                     OverworldEnemy f1 = new OverworldEnemy();
                                     f1.CharacterID = 4;
                                     f1.Level = 7;
-                                    f1.BonusStats = new int[7] { 100, 100, 0, 0, 0, 0, 0 };
+                                    f1.BonusStats = new int[7] { 100, 100, 0, 5, 0, 5, 0 };
                                     team.Add(f1);
                                     int[] positions = new int[5] { -1, -1, 0, -1, -1 };
                                     LoadBattle(team,positions,"bally2");
+                                    break;
+                            }
+                            break;
+                        case "pebbleham":
+                            switch (dialogEvent)
+                            {
+                                case "befriend":
+                                    Character c = CreateCharacter(5, 7, -1, -1, 0, 10, 11, true);
+                                    playerSaveData.CharacterList.Add(c);
+                                    int index = playerSaveData.CharacterList.IndexOf(c);
+                                    int slot = -1;
+                                    int count = 0;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (playerSaveData.Party[i] == -1 && slot == -1)
+                                            slot = i;
+                                        if (playerSaveData.Party[i] != -1)
+                                            count++;
+                                    }
+                                    if (count < 3)
+                                        playerSaveData.Party[slot] = index;
+                                    Event e = new Event();
+                                    e.Name = "pebbleBefriend";
+                                    e.Value = 0;
+                                    playerSaveData.Events.Add(e);
+                                    level.objects.Objects.Remove("npc2");
+                                    break;
+                                case "fight":
+                                    List<OverworldEnemy> team = new List<OverworldEnemy>();
+                                    OverworldEnemy f1 = new OverworldEnemy();
+                                    f1.CharacterID = 5;
+                                    f1.Level = 7;
+                                    f1.BonusStats = new int[7] { 100, 100, 0, 5, 0, 5, 0 };
+                                    team.Add(f1);
+                                    int[] positions = new int[5] { -1, -1, 0, -1, -1 };
+                                    LoadBattle(team, positions, "pebble2");
+                                    break;
+                            }
+                            break;
+                        case "robster":
+                            switch (dialogEvent)
+                            {
+                                case "win":
+                                    Event e = new Event();
+                                    e.Name = "robster1";
+                                    e.Value = 0;
+                                    playerSaveData.Events.Add(e);
+                                    level.objects.Objects.Remove("npc1");
+                                    break;
+                                case "fight":
+                                    List<OverworldEnemy> team = new List<OverworldEnemy>();
+                                    OverworldEnemy f1 = new OverworldEnemy();
+                                    f1.CharacterID = 10;
+                                    f1.Level = 13;
+                                    f1.BonusStats = new int[7] { 150, 100, 0, 5, 0, 5, 0 };
+                                    team.Add(f1);
+                                    OverworldEnemy f2 = new OverworldEnemy();
+                                    f2.CharacterID = 9;
+                                    f2.Level = 8;
+                                    f2.BonusStats = new int[7] { 25, 50, 0, 0, 0, 0, 0 };
+                                    team.Add(f2);
+                                    OverworldEnemy f3 = new OverworldEnemy();
+                                    f3.CharacterID = 9;
+                                    f3.Level = 8;
+                                    f3.BonusStats = new int[7] { 25, 50, 0, 0, 0, 0, 0 };
+                                    team.Add(f3);
+                                    int[] positions = new int[5] { -1, 1, 0, 2, -1 };
+                                    LoadBattle(team, positions, "robster2");
                                     break;
                             }
                             break;
@@ -842,11 +917,9 @@ namespace Game1
                 }
                 if (State == GameState.Dialog && newDialogName != null)
                 {
-                    Console.WriteLine("loading a dliagog");
                     currentDialog = SearchDialog(newDialogName);
                     if (currentDialog.Name != null)
                     {
-                        Console.WriteLine("success");
                         play.dialogUI.box.Name = currentDialog.CharName;
                         play.dialogUI.box.Text = currentDialog.Text;
                         play.dialogUI.options.NewOptions(currentDialog);
@@ -920,7 +993,6 @@ namespace Game1
                         battle.state = BattleState.Regular;
                         if (battle.postAnimation == PostAnimation.Attack)
                             battle.Attack(battle.tempFighter, battle.tempEnemyTeam, battle.tempSelection, battle.tempAtkData);
-
                         else if (battle.postAnimation == PostAnimation.End)
                             battle.ResumeEndBattle();
                         else if (battle.postAnimation == PostAnimation.TrueEnd)

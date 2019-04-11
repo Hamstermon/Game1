@@ -399,6 +399,12 @@ namespace Game1
                         case "bally":
                             game.newDialogName = "bally1";
                             break;
+                        case "pebbleham":
+                            game.newDialogName = "pebble1";
+                            break;
+                        case "robster":
+                            game.newDialogName = "robster1";
+                            break;
                         default: //if the npc has no logic return to the playing state
                             game.State = Game1.GameState.Playing;
                             break;
@@ -423,6 +429,18 @@ namespace Game1
                     break;
                 case "bally":
                     if (game.FindEvent("ballyBefriend") >= 0)
+                    {
+                        visible = false;
+                    }
+                    break;
+                case "pebbleham":
+                    if (game.FindEvent("pebbleBefriend") >= 0)
+                    {
+                        visible = false;
+                    }
+                    break;
+                case "robster":
+                    if (game.FindEvent("robster1") >= 0)
                     {
                         visible = false;
                     }
