@@ -15,7 +15,6 @@ namespace Game1
     public class Level
     {
         public Map map;
-        List<Node> nodes;
         public MapData mapData;
         public Squared.Tiled.Object cameraFocus;
         Layer collision;
@@ -51,7 +50,6 @@ namespace Game1
             teleportLocations = mapName.ObjectGroups["teleportDestination"];
             objects = mapName.ObjectGroups["5objects"];
             mapData = game.SearchMap(mapID);
-            nodes = GetNodes();
             //if (player != null)
             //    objects.Objects.Remove(player.Name);
             foreach (OverworldEnemy enemy in enemies)
@@ -246,39 +244,6 @@ namespace Game1
                 }
             }
             return nodes;
-        }
-
-        private Node FindNode(Vector2 pos)
-        {
-            Node node = new Node();
-            foreach (Node i in nodes)
-            {
-                if (i.Position == pos)
-                {
-                    node = i;
-                    break;
-                }
-            }
-            return node;
-        }
-
-        private Node NodeFromObject(Squared.Tiled.Object character)
-        {
-            double x = character.X / map.TileWidth;
-            double y = character.Y / map.TileHeight;
-            Vector2 pos = new Vector2((float)Math.Round(x, 0), (float)Math.Round(y, 0) );
-            Node node = FindNode(pos);
-            return node;
-        }
-
-        private void SortNodes(Vector2 start)
-        {
-            List<Node> nodesSort = nodes.OrderBy(x => x.Position - start).ToList();
-        }
-
-        public void Pathfind(Vector2 start, Vector2 end)
-        {
-            SortNodes(start);
         }
 
         public bool MoveCharacter(OverworldChar characterData, Squared.Tiled.Object character, int direction)
