@@ -38,7 +38,7 @@ namespace Game1
             game = test;
             noOfTurns = not;
             levelOver = false;
-            LoadMap(mapName,0,x,y);
+            LoadMap(mapName,game.mapID,x,y);
         }
 
         private void LoadMap(Map mapName,int mapID,int x, int y)

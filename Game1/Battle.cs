@@ -648,7 +648,7 @@ namespace Game1
                             mp[skill%4] = false;
                         }
                     }
-                    while (atk.Name == "" || mp == new bool[3] { false, false, false });
+                    while (atk.Name == "" || (mp[0] == false && mp[1] == false && mp[2] == false));
                     if (mp == new bool[3] { false, false, false })
                     {
                         action.command = BattleAction.Command.Defend;
