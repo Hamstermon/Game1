@@ -195,57 +195,7 @@ namespace Game1
             //map.Draw(s, new Rectangle(0, 0, g.Viewport.Width, g.Viewport.Height), viewportPosition);
 
         }
-
-        class Node
-        {
-            Vector2 pos;
-            public Vector2 Position
-            {
-                set { pos = value; }
-                get { return pos; }
-            }
-            bool[] adj;
-            public bool[] Adjacent
-            {
-                set { adj = value; }
-                get { return adj; }
-            }
-        }
-
-        private List<Node> GetNodes()
-        {
-            List<Node> nodes = new List<Node>();
-            for (int x = 0; x < map.Width; x++)
-            {
-                for (int y = 0; y < map.Height; y++)
-                {
-                    if (collision.GetTile(x, y) == 6)
-                    {
-                        Node temp = new Node();
-                        temp.Position = new Vector2(x, y);
-                        temp.Adjacent = new bool[4] { false, false, false, false };
-                        if (x - 1 >= 0 && collision.GetTile(x - 1, y) == 6)
-                        {
-                            temp.Adjacent[1] = true;
-                        }
-                        if (x + 1 <= map.Width && collision.GetTile(x + 1, y) == 6)
-                        {
-                            temp.Adjacent[3] = true;
-                        }
-                        if (y - 1 >= 0 && collision.GetTile(x, y - 1) == 6)
-                        {
-                            temp.Adjacent[2] = true;
-                        }
-                        if (y + 1 <= map.Height && collision.GetTile(x, y + 1) == 6)
-                        {
-                            temp.Adjacent[0] = true;
-                        }
-                    }
-                }
-            }
-            return nodes;
-        }
-
+        
         public bool MoveCharacter(OverworldChar characterData, Squared.Tiled.Object character, int direction)
         {
             bool successfulMove = false; 

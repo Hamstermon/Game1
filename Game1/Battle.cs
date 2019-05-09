@@ -915,11 +915,11 @@ namespace Game1
                             damage = (int)((float)damage * multiplier);
                             defender.CurrentHP = defender.CurrentHP - damage;
                             Console.WriteLine("DAMAGE DEAL");
-                        }
-                        if (fullPower)
-                        {
-                            Effect(attacker, defender, data.Effect1Name, data.Effect1Chance, damage);
-                            Effect(attacker, defender, data.Effect2Name, data.Effect2Chance, damage);
+                            if (fullPower)
+                            {
+                                Effect(attacker, defender, data.Effect1Name, data.Effect1Chance, damage);
+                                Effect(attacker, defender, data.Effect2Name, data.Effect2Chance, damage);
+                            }
                         }
                     }
                 }
