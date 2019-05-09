@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="2017.06.27" orientation="orthogonal" renderorder="right-down" width="51" height="51" tilewidth="32" tileheight="32" nextobjectid="6">
+<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="51" height="51" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="6">
  <tileset firstgid="1" name="Tileset" tilewidth="32" tileheight="32" tilecount="400" columns="20">
   <image source="Tileset.png" trans="ff00ff" width="640" height="640"/>
  </tileset>
- <layer name="1collision" width="51" height="51">
+ <layer id="9" name="1collision" width="51" height="51">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -58,7 +58,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer name="2floor" width="51" height="51">
+ <layer id="10" name="2floor" width="51" height="51">
   <data encoding="csv">
 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
@@ -113,7 +113,7 @@
 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
 </data>
  </layer>
- <layer name="3raisedfloor" width="51" height="51">
+ <layer id="11" name="3raisedfloor" width="51" height="51">
   <data encoding="csv">
 302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,
 302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,
@@ -168,7 +168,7 @@
 302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,302,303,0,0,0,0,301,302,302,302,302,302,302,302,302,302
 </data>
  </layer>
- <layer name="4raisederfloor" width="51" height="51">
+ <layer id="12" name="4raisederfloor" width="51" height="51">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -223,7 +223,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <objectgroup name="5objects">
+ <objectgroup id="5" name="5objects">
   <object id="4" name="npc1" type="NPC" x="1264" y="208" width="32" height="32">
    <properties>
     <property name="direction" value="2"/>
@@ -241,7 +241,7 @@
    </properties>
   </object>
  </objectgroup>
- <objectgroup name="teleport">
+ <objectgroup id="6" name="teleport">
   <object id="3" name="tp1" x="1184" y="1440" width="128" height="32">
    <properties>
     <property name="destination" value="tp2"/>
@@ -249,10 +249,10 @@
    </properties>
   </object>
  </objectgroup>
- <objectgroup name="teleportDestination">
+ <objectgroup id="7" name="teleportDestination">
   <object id="1" name="tp1" x="1232" y="1376" width="32" height="32"/>
  </objectgroup>
- <layer name="6abovefloor" width="51" height="51">
+ <layer id="13" name="6abovefloor" width="51" height="51">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
